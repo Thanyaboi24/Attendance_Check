@@ -1,0 +1,6 @@
+{
+  "platforms": ["android"],
+  "android": {
+    "modules": ["th.ac.siit.attendance.scheduler.AttendanceSchedulerModule"]
+  }
+}

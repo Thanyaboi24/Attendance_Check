@@ -1,0 +1,292 @@
+// Attendance database (design §17.5, DS2 §2.9). All timestamps are timestamptz (UTC).
+// Integrity rules Prisma cannot express (partial unique indexes, CHECK constraints) live in
+// prisma/migrations/*_integrity/migration.sql.
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  STAFF
+  ATTENDANCE_ADMIN
+  SYSTEM_ADMIN
+}
+
+enum AccountStatus {
+  PENDING_ACTIVATION
+  ACTIVE
+  DEACTIVATED
+}
+
+enum RequestType {
+  CHECK_IN
+  CHECK_OUT
+}
+
+enum RequestStatus {
+  ACTIVE
+  APPROVED
+  CANCELLED
+  UNRESOLVED
+  REJECTED
+}
+
+enum Method {
+  MANUAL
+  AUTOMATIC
+  ADMIN_CORRECTED
+}
+
+enum SessionStatus {
+  OPEN
+  COMPLETED
+}
+
+enum LocationClass {
+  CONFIRMED_INSIDE
+  CONFIRMED_OUTSIDE
+  UNCERTAIN
+}
+
+enum NotificationStatus {
+  POSTED
+  FAILED
+}
+
+enum NotificationEventType {
+  POSTED
+  FAILED
+  RESPONDED
+  DISMISSED
+}
+
+enum CorrectionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ActionTokenType {
+  ACTIVATION
+  PASSWORD_RESET
+}
+
+enum ActorType {
+  USER
+  SYSTEM
+}
+
+model User {
+  id               String        @id @default(uuid())
+  staffId          String        @unique
+  email            String        @unique
+  fullName         String
+  department       String
+  passwordHash     String?
+  role             Role
+  status           AccountStatus @default(PENDING_ACTIVATION)
+  failedLoginCount Int           @default(0)
+  lockedUntil      DateTime?     @db.Timestamptz(3)
+  lastLoginAt      DateTime?     @db.Timestamptz(3)
+  createdAt        DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime      @updatedAt @db.Timestamptz(3)
+
+  sessions           AttendanceSession[]
+  requests           AttendanceRequest[]
+  corrections        CorrectionRequest[]     @relation("CorrectionOwner")
+  reviewedCorrection CorrectionRequest[]     @relation("CorrectionReviewer")
+  refreshTokens      RefreshToken[]
+  actionTokens       ActionToken[]
+  notificationEvents NotificationEvent[]
+  auditLogs          AuditLog[]
+  geofenceConfigs    GeofenceConfiguration[]
+}
+
+model RefreshToken {
+  id         String    @id @default(uuid())
+  userId     String
+  tokenHash  String    @unique
+  expiresAt  DateTime  @db.Timestamptz(3)
+  revokedAt  DateTime? @db.Timestamptz(3)
+  replacedBy String?
+  createdAt  DateTime  @default(now()) @db.Timestamptz(3)
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+/// Single-use, time-limited activation / password-reset tokens (stored as SHA-256 hashes).
+model ActionToken {
+  id        String          @id @default(uuid())
+  userId    String
+  type      ActionTokenType
+  tokenHash String          @unique
+  expiresAt DateTime        @db.Timestamptz(3)
+  usedAt    DateTime?       @db.Timestamptz(3)
+  createdAt DateTime        @default(now()) @db.Timestamptz(3)
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type])
+}
+
+/// Every change creates a new version; requests keep the version they were created with.
+model GeofenceConfiguration {
+  version           Int      @id @default(autoincrement())
+  name              String
+  centerLat         Float
+  centerLng         Float
+  radiusM           Int
+  gracePeriodSec    Int      @default(300)
+  maxLocationAgeSec Int      @default(60)
+  maxAccuracyM      Int      @default(30)
+  effectiveAt       DateTime @default(now()) @db.Timestamptz(3)
+  reason            String?
+  createdById       String?
+  createdBy         User?    @relation(fields: [createdById], references: [id])
+
+  requests AttendanceRequest[]
+}
+
+model AttendanceSession {
+  id                 String        @id @default(uuid())
+  userId             String
+  checkInAt          DateTime      @db.Timestamptz(3)
+  checkInMethod      Method
+  checkOutAt         DateTime?     @db.Timestamptz(3)
+  checkOutMethod     Method?
+  status             SessionStatus @default(OPEN)
+  corrected          Boolean       @default(false)
+  /// Values before the first administrative correction (DS2 §2.9.4); full history is in AuditLog.
+  originalCheckInAt  DateTime?     @db.Timestamptz(3)
+  originalCheckOutAt DateTime?     @db.Timestamptz(3)
+  flaggedLongOpenAt  DateTime?     @db.Timestamptz(3)
+  createdAt          DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime      @updatedAt @db.Timestamptz(3)
+  user               User          @relation(fields: [userId], references: [id])
+  requests           AttendanceRequest[]
+  corrections        CorrectionRequest[]
+
+  @@index([userId, checkInAt])
+  @@index([status])
+}
+
+model AttendanceRequest {
+  /// UUID generated on the phone = idempotency key.
+  id                   String              @id @db.Uuid
+  userId               String
+  sessionId            String?
+  type                 RequestType
+  status               RequestStatus       @default(ACTIVE)
+  method               Method?
+  configVersion        Int
+  geofenceDetectedAt   DateTime            @db.Timestamptz(3)
+  notificationStatus   NotificationStatus?
+  notificationPostedAt DateTime?           @db.Timestamptz(3)
+  deadlineAt           DateTime            @db.Timestamptz(3)
+  userConfirmedAt      DateTime?           @db.Timestamptz(3)
+  clientRecordedAt     DateTime?           @db.Timestamptz(3)
+  /// Official attendance time (server approval time).
+  approvedAt           DateTime?           @db.Timestamptz(3)
+  resolvedAt           DateTime?           @db.Timestamptz(3)
+  resolutionReason     String?
+  locationAttempts     Int?
+  deviceModel          String?
+  deviceOs             String?
+  appVersion           String?
+  createdAt            DateTime            @default(now()) @db.Timestamptz(3)
+  updatedAt            DateTime            @updatedAt @db.Timestamptz(3)
+
+  user               User                  @relation(fields: [userId], references: [id])
+  session            AttendanceSession?    @relation(fields: [sessionId], references: [id])
+  config             GeofenceConfiguration @relation(fields: [configVersion], references: [version])
+  evidence           LocationEvidence[]
+  notificationEvents NotificationEvent[]
+
+  @@index([userId, status])
+  @@index([status, deadlineAt])
+  @@index([createdAt])
+}
+
+model LocationEvidence {
+  id                   String         @id @default(uuid())
+  requestId            String         @db.Uuid
+  /// CONFIRM | AUTO | CANCEL | UNRESOLVED
+  stage                String
+  lat                  Float
+  lng                  Float
+  measuredAt           DateTime       @db.Timestamptz(3)
+  accuracyM            Float?
+  isMock               Boolean        @default(false)
+  /// Computed by the server.
+  distanceM            Float?
+  classification       LocationClass
+  clientDistanceM      Float?
+  clientClassification LocationClass?
+  receivedAt           DateTime       @default(now()) @db.Timestamptz(3)
+  request              AttendanceRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([requestId])
+  @@index([receivedAt])
+}
+
+model CorrectionRequest {
+  /// UUID generated by the client = idempotency key.
+  id                  String             @id @db.Uuid
+  userId              String
+  sessionId           String?
+  /// Bangkok calendar date YYYY-MM-DD.
+  workDate            String
+  requestedCheckInAt  DateTime?          @db.Timestamptz(3)
+  requestedCheckOutAt DateTime?          @db.Timestamptz(3)
+  reason              String
+  status              CorrectionStatus   @default(PENDING)
+  reviewNote          String?
+  reviewerId          String?
+  reviewedAt          DateTime?          @db.Timestamptz(3)
+  createdAt           DateTime           @default(now()) @db.Timestamptz(3)
+  user                User               @relation("CorrectionOwner", fields: [userId], references: [id])
+  reviewer            User?              @relation("CorrectionReviewer", fields: [reviewerId], references: [id])
+  session             AttendanceSession? @relation(fields: [sessionId], references: [id])
+
+  @@index([userId, createdAt])
+  @@index([status])
+}
+
+model NotificationEvent {
+  id         String                @id @default(uuid())
+  requestId  String                @db.Uuid
+  userId     String
+  type       NotificationEventType
+  occurredAt DateTime              @db.Timestamptz(3)
+  action     String?
+  detail     String?
+  receivedAt DateTime              @default(now()) @db.Timestamptz(3)
+  request    AttendanceRequest     @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  user       User                  @relation(fields: [userId], references: [id])
+
+  @@index([requestId])
+}
+
+/// Append-only (no update/delete endpoints).
+model AuditLog {
+  id             String    @id @default(uuid())
+  actorId        String?
+  actorType      ActorType
+  action         String
+  entityType     String
+  entityId       String
+  previousValues Json?
+  newValues      Json?
+  reason         String?
+  createdAt      DateTime  @default(now()) @db.Timestamptz(3)
+  actor          User?     @relation(fields: [actorId], references: [id])
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}

@@ -1,0 +1,22 @@
+{
+  "name": "faculty-attendance",
+  "private": true,
+  "description": "Software for Attendance Check for Staff Using Geofencing Technology (SIIT Senior Project BL1-2026)",
+  "packageManager": "pnpm@12.15.0",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev --parallel",
+    "test": "turbo run test",
+    "typecheck": "turbo run typecheck",
+    "lint": "turbo run lint",
+    "android": "pnpm --filter @attendance/shared build && pnpm --filter mobile android",
+    "mobile:start": "pnpm --filter mobile start",
+    "db:up": "docker compose up -d postgres mailpit",
+    "db:down": "docker compose down"
+  },
+  "devDependencies": {
+    "turbo": "^2.11.10",
+    "typescript": "~5.9.3"
+  }
+}

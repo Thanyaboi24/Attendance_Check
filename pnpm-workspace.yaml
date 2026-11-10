@@ -1,0 +1,27 @@
+packages:
+  - apps/*
+  - packages/*
+
+# Flat node_modules (Expo's recommendation for monorepos). The default isolated
+# layout's deep .pnpm paths exceed what the Android NDK's ninja can handle on Windows.
+nodeLinker: hoisted
+
+# Dependencies allowed to run install scripts (pnpm blocks them by default).
+allowBuilds:
+  esbuild: true
+  '@prisma/client': true
+  '@prisma/engines': true
+  prisma: true
+  argon2: true
+  '@nestjs/core': true
+  '@scarf/scarf': false
+  cpu-features: false
+  ssh2: false
+  protobufjs: false
+  unrs-resolver: true
+  '@embedded-postgres/windows-x64': true
+  '@parcel/watcher': false
+
+minimumReleaseAgeExclude:
+  - '@tanstack/query-core@5.105.1'
+  - '@tanstack/react-query@5.105.1'

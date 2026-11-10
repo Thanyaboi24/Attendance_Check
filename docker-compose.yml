@@ -1,0 +1,46 @@
+# Development stack. Production: put Caddy/Nginx with TLS in front of `api` (design §17.8).
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: attendance
+      POSTGRES_PASSWORD: attendance
+      POSTGRES_DB: attendance
+    ports:
+      - '5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U attendance -d attendance']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # Catches activation / password-reset emails in development: http://localhost:8025
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - '1025:1025'
+      - '8025:8025'
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    profiles: ['full']
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://attendance:attendance@postgres:5432/attendance?schema=public
+      JWT_SECRET: ${JWT_SECRET:-change-me-to-a-long-random-secret-of-32-chars}
+      APP_LINK_BASE: ${APP_LINK_BASE:-http://localhost:5173}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
+      SMTP_HOST: mailpit
+      SMTP_PORT: '1025'
+    ports:
+      - '3000:3000'
+
+volumes:
+  pgdata:

@@ -1,0 +1,14 @@
+node_modules/
+dist/
+build/
+coverage/
+.turbo/
+.env
+.env.local
+*.log
+# Expo / Android
+apps/mobile/.expo/
+apps/mobile/android/
+apps/mobile/ios/
+*.keystore
+.local-pg/
