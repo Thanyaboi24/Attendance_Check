@@ -29,6 +29,7 @@ export default {
   nav: {
     main: 'เมนูหลัก',
     dashboard: 'ภาพรวม',
+    signups: 'คำขอลงทะเบียน',
     sessions: 'รอบการลงเวลา',
     requests: 'คำขอลงเวลา',
     corrections: 'คำขอแก้ไขเวลา',
@@ -83,6 +84,10 @@ export default {
     INVALID_CREDENTIALS: 'อีเมลหรือรหัสผ่านไม่ถูกต้อง',
     ACCOUNT_LOCKED: 'บัญชีนี้ถูกล็อกชั่วคราวเนื่องจากเข้าสู่ระบบไม่สำเร็จหลายครั้ง',
     ACCOUNT_INACTIVE: 'บัญชีนี้ยังไม่ได้ใช้งาน',
+    ACCOUNT_PENDING_APPROVAL: 'บัญชีนี้รอผู้ดูแลอนุมัติคำขอลงทะเบียน',
+    ACCOUNT_REJECTED: 'คำขอลงทะเบียนของบัญชีนี้ไม่ได้รับการอนุมัติ',
+    SIGNUP_DISABLED: 'ขณะนี้ปิดรับการลงทะเบียน',
+    SIGNUP_NOT_PENDING: 'คำขอลงทะเบียนนี้ได้รับการพิจารณาแล้ว',
     TOKEN_INVALID: 'ลิงก์หรือการเข้าสู่ระบบนี้ไม่ถูกต้องหรือหมดอายุแล้ว',
     FORBIDDEN: 'คุณไม่มีสิทธิ์ดำเนินการนี้',
     NOT_FOUND: 'ไม่พบข้อมูลที่ต้องการ',
@@ -114,7 +119,9 @@ export default {
     },
     accountStatus: {
       PENDING_ACTIVATION: 'รอเปิดใช้งาน',
+      PENDING_APPROVAL: 'รออนุมัติ',
       ACTIVE: 'ใช้งานอยู่',
+      REJECTED: 'ไม่อนุมัติ',
       DEACTIVATED: 'ปิดใช้งาน',
     },
     sessionStatus: {
@@ -184,6 +191,10 @@ export default {
       USER_ACTIVE: 'เปิดใช้งานผู้ใช้งาน',
       USER_DEACTIVATED: 'ปิดใช้งานผู้ใช้งาน',
       USER_PENDING_ACTIVATION: 'ผู้ใช้งานรอเปิดใช้งาน',
+      USER_SIGNED_UP: 'ลงทะเบียน',
+      USER_SIGNUP_RESUBMITTED: 'ส่งคำขอลงทะเบียนอีกครั้ง',
+      SIGNUP_APPROVED: 'อนุมัติคำขอลงทะเบียน',
+      SIGNUP_REJECTED: 'ไม่อนุมัติคำขอลงทะเบียน',
     },
     entityType: {
       AttendanceSession: 'รอบการลงเวลา',

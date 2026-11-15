@@ -2,18 +2,21 @@ import { useQuery } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { DISPLAY_TIME_ZONE, Role, type DashboardSummary } from '@attendance/shared';
+import { DISPLAY_TIME_ZONE, type DashboardSummary } from '@attendance/shared';
 import { api } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
+import { rolesFor } from '../auth/roles';
 import { Icon, type IconName } from '../components/icons';
 import { ErrorBox } from '../components/ui';
 
-type AttentionKey = 'unresolvedRequests' | 'pendingCorrections' | 'longOpenSessions';
+type AttentionKey = 'unresolvedRequests' | 'pendingCorrections' | 'longOpenSessions' | 'pendingSignups';
 
+/** Each row links to its review page when the signed-in role may open it (see NAV_ITEMS roles). */
 const ATTENTION: { key: AttentionKey; link: string; icon: IconName }[] = [
   { key: 'unresolvedRequests', link: '/requests', icon: 'alert' },
   { key: 'pendingCorrections', link: '/corrections', icon: 'corrections' },
   { key: 'longOpenSessions', link: '/sessions', icon: 'hourglass' },
+  { key: 'pendingSignups', link: '/signups', icon: 'signups' },
 ];
 
 const pct = (part: number, whole: number) => (whole > 0 ? Math.min(100, Math.round((part / whole) * 100)) : 0);
@@ -80,7 +83,8 @@ export function DashboardPage() {
     queryFn: () => api.get<DashboardSummary>('/admin/dashboard/summary'),
     refetchInterval: 60_000,
   });
-  const canFollowLinks = user?.role === Role.ATTENDANCE_ADMIN;
+  // A row links to its page only when the signed-in role may open that page.
+  const canFollow = (link: string) => !!user && rolesFor(link).includes(user.role);
   const hour = bangkokHour();
   const period = hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening';
   const firstName = user?.fullName.trim().split(/\s+/)[0] ?? '';
@@ -166,7 +170,7 @@ export function DashboardPage() {
             <h2 id="attention-title" className="panel-title">
               {t('attention.title')}
             </h2>
-            {ATTENTION.every((a) => s[a.key] === 0) ? (
+            {ATTENTION.every((a) => !s[a.key]) ? (
               <div className="all-clear">
                 <span className="all-clear-icon">
                   <Icon name="check" size={22} />
@@ -179,7 +183,8 @@ export function DashboardPage() {
             ) : null}
             <ul className="attention-list">
               {ATTENTION.map((a) => {
-                const value = s[a.key];
+                const value = s[a.key] ?? 0;
+                const canFollowLinks = canFollow(a.link);
                 const body = (
                   <>
                     <span className={`att-icon${value > 0 ? ' att-icon-warn' : ''}`}>

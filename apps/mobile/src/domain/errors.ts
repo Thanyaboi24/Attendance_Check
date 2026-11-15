@@ -92,6 +92,9 @@ const VALIDATION_KEY = {
   'Password must be at least 8 characters': 'errors:validation.passwordMin',
   'Password must contain a letter': 'errors:validation.passwordLetter',
   'Password must contain a digit': 'errors:validation.passwordDigit',
+  'Enter your staff ID': 'errors:validation.staffIdRequired',
+  'Enter your full name': 'errors:validation.fullNameRequired',
+  'Enter your department': 'errors:validation.departmentRequired',
 } as const;
 
 /**

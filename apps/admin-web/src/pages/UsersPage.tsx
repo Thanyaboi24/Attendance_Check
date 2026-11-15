@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
 import {
@@ -24,6 +25,10 @@ import { emailField, msg } from '../lib/validation';
 const PAGE_SIZE = 25;
 /** The global `t` (always the current language), for messages built outside render. */
 const tr = t;
+
+/** Self-registrations still under (or refused at) review: their status is decided on the Sign-up requests page. */
+const isSignupReview = (u: AdminUserDto) =>
+  u.status === AccountStatus.PENDING_APPROVAL || u.status === AccountStatus.REJECTED;
 
 type Pending =
   | { kind: 'toggle'; user: AdminUserDto }
@@ -170,7 +175,11 @@ export function UsersPage() {
                         <button type="button" className="btn btn-small" onClick={() => setPending({ kind: 'edit', user: u })}>
                           {t('common:actions.edit')}
                         </button>{' '}
-                        {u.status === AccountStatus.PENDING_ACTIVATION ? (
+                        {isSignupReview(u) ? (
+                          <Link to="/signups" className="btn btn-small">
+                            {t('actions.reviewSignup')}
+                          </Link>
+                        ) : u.status === AccountStatus.PENDING_ACTIVATION ? (
                           <button
                             type="button"
                             className="btn btn-small"

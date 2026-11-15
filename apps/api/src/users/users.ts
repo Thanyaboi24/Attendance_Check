@@ -76,6 +76,14 @@ export class UsersService {
     if (actorId === id && ((dto.status && dto.status !== 'ACTIVE') || (dto.role && dto.role !== before.role))) {
       throw Errors.forbidden('You cannot deactivate your own account or change your own role');
     }
+    if (before.status === 'PENDING_APPROVAL' || before.status === 'REJECTED') {
+      if (dto.status && dto.status !== before.status) {
+        throw Errors.conflict(ErrorCode.SIGNUP_NOT_PENDING, 'Approve or reject this sign-up on the Sign-up requests page');
+      }
+    }
+    if (dto.status === 'PENDING_APPROVAL' || dto.status === 'REJECTED') {
+      throw Errors.badRequest(ErrorCode.VALIDATION_FAILED, 'Sign-up states are set by the sign-up review');
+    }
     if (dto.status === 'ACTIVE' && !before.passwordHash) {
       throw Errors.badRequest(ErrorCode.VALIDATION_FAILED, 'This user has not activated the account yet; resend the activation email instead');
     }

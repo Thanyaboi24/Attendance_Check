@@ -1,5 +1,6 @@
 import { GeofenceZoneSchema } from './geofence';
 import { z } from 'zod';
+import { AccountStatus } from '../enums';
 import { AccountStatusSchema, RoleSchema, UserProfileSchema } from './auth';
 import {
   AttendanceRequestDtoSchema,
@@ -17,6 +18,30 @@ export const AdminUserDtoSchema = UserProfileSchema.extend({
   lastLoginAt: IsoDateTime.nullable(),
 });
 export type AdminUserDto = z.infer<typeof AdminUserDtoSchema>;
+
+// ---- Sign-up review (Attendance Administrator, System Administrator) ---------
+export const SignupStatusSchema = z.enum([AccountStatus.PENDING_APPROVAL, AccountStatus.REJECTED, AccountStatus.ACTIVE]);
+export type SignupStatus = z.infer<typeof SignupStatusSchema>;
+
+export const SignupDtoSchema = AdminUserDtoSchema.extend({
+  reviewedAt: IsoDateTime.nullable(),
+  reviewedBy: z.object({ id: z.string(), fullName: z.string() }).nullable(),
+  reviewNote: z.string().nullable(),
+});
+export type SignupDto = z.infer<typeof SignupDtoSchema>;
+
+export const SignupListQuerySchema = PageQuerySchema.extend({
+  /** Default PENDING_APPROVAL. ACTIVE lists approved self-registrations. */
+  status: SignupStatusSchema.optional(),
+  q: z.string().trim().max(100).optional(),
+});
+export type SignupListQuery = z.input<typeof SignupListQuerySchema>;
+
+export const ApproveSignupSchema = z.object({ note: z.string().trim().max(500).optional() });
+export type ApproveSignup = z.input<typeof ApproveSignupSchema>;
+
+export const RejectSignupSchema = z.object({ reason: z.string().trim().min(1, 'Enter a reason').max(500) });
+export type RejectSignup = z.input<typeof RejectSignupSchema>;
 
 export const CreateUserSchema = z.object({
   staffId: z.string().trim().min(1).max(40),
@@ -154,6 +179,8 @@ export const DashboardSummarySchema = z.object({
   manualActionsToday: z.number().int(),
   unresolvedRequests: z.number().int(),
   pendingCorrections: z.number().int(),
+  /** Self-registrations waiting for approval. */
+  pendingSignups: z.number().int(),
   longOpenSessions: z.number().int(),
 });
 export type DashboardSummary = z.infer<typeof DashboardSummarySchema>;

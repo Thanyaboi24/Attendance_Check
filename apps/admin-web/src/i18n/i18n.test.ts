@@ -57,6 +57,10 @@ describe('Thai resources', () => {
     expect(errorMessage(new ApiRequestError(409, 'CORRECTION_NOT_PENDING', 'Already reviewed'))).toBe(
       'คำขอแก้ไขเวลานี้ได้รับการตรวจสอบแล้ว',
     );
+    expect(errorMessage(new ApiRequestError(409, 'SIGNUP_NOT_PENDING', 'Already reviewed'))).toBe(
+      'คำขอลงทะเบียนนี้ได้รับการพิจารณาแล้ว',
+    );
+    expect(enumLabel('accountStatus', 'PENDING_APPROVAL')).toBe('รออนุมัติ');
     expect(errorMessage(new ApiRequestError(418, 'TEAPOT', 'I am a teapot'))).toBe('I am a teapot');
   });
 });

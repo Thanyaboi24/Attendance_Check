@@ -2,6 +2,14 @@ import type { ApiError as ApiErrorBody, TokenPair } from '@attendance/shared';
 import { ErrorCode } from '@attendance/shared';
 import { currentLanguage, i18n, t } from '../i18n';
 
+/** 403 codes that describe the account's state rather than a missing permission. */
+const ACCOUNT_STATE_CODES = new Set<string>([
+  ErrorCode.ACCOUNT_INACTIVE,
+  ErrorCode.ACCOUNT_PENDING_APPROVAL,
+  ErrorCode.ACCOUNT_REJECTED,
+  ErrorCode.SIGNUP_DISABLED,
+]);
+
 export const REFRESH_TOKEN_KEY = 'attendance-admin.refreshToken';
 
 /** A non-2xx response (or a network failure, status 0) normalised to the backend `ApiError` shape. */
@@ -19,7 +27,7 @@ export class ApiRequestError extends Error {
   }
 
   get isForbidden(): boolean {
-    return this.status === 403 && this.code !== ErrorCode.ACCOUNT_INACTIVE;
+    return this.status === 403 && !ACCOUNT_STATE_CODES.has(this.code);
   }
 }
 

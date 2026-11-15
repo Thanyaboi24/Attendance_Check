@@ -12,6 +12,9 @@ export default {
     passwordMin: 'รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร',
     passwordLetter: 'รหัสผ่านต้องมีตัวอักษรภาษาอังกฤษอย่างน้อยหนึ่งตัว',
     passwordDigit: 'รหัสผ่านต้องมีตัวเลขอย่างน้อยหนึ่งตัว',
+    staffIdRequired: 'กรุณากรอกรหัสบุคลากร',
+    fullNameRequired: 'กรุณากรอกชื่อ-นามสกุล',
+    departmentRequired: 'กรุณากรอกหน่วยงาน',
     invalidInput: 'ข้อมูลไม่ถูกต้อง',
   },
 } satisfies Messages<typeof en>;

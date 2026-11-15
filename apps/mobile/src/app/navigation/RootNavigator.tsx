@@ -7,6 +7,8 @@ import { ActivityIndicator, View } from 'react-native';
 import { ForgotPasswordScreen } from '../../features/auth/ForgotPasswordScreen';
 import { LoginScreen } from '../../features/auth/LoginScreen';
 import { SetPasswordScreen } from '../../features/auth/SetPasswordScreen';
+import { SignUpScreen } from '../../features/auth/SignUpScreen';
+import { SignUpSubmittedScreen } from '../../features/auth/SignUpSubmittedScreen';
 import { CorrectionScreen } from '../../features/correction/CorrectionScreen';
 import { DashboardScreen } from '../../features/dashboard/DashboardScreen';
 import { RequestsScreen } from '../../features/correction/RequestsScreen';
@@ -72,6 +74,8 @@ export function RootNavigator() {
       {authStatus === 'signedOut' ? (
         <Stack.Group>
           <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="SignUp" component={SignUpScreen} options={{ title: t('screens.signUp') }} />
+          <Stack.Screen name="SignUpSubmitted" component={SignUpSubmittedScreen} options={{ title: t('screens.signUpSubmitted'), headerBackVisible: false, gestureEnabled: false }} />
           <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} options={{ title: t('screens.forgotPassword') }} />
           <Stack.Screen name="Activate" component={SetPasswordScreen} options={{ title: t('screens.activate') }} />
           <Stack.Screen name="ResetPassword" component={SetPasswordScreen} options={{ title: t('screens.resetPassword') }} />

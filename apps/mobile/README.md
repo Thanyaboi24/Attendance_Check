@@ -71,7 +71,7 @@ Every entry point (UI, `GEOFENCE_TASK`, `GracePeriodTask`, `SyncTask`, `BootTask
 
 ## Testing on the emulator with mock locations
 
-1. Start the backend (seed geofence v1: SIIT Rangsit `14.0693, 100.6035`, radius 150 m, grace 300 s) and sign in as `staff@siit.tu.ac.th` / `Staff1234`.
+1. Start the backend (seed geofence v1: SIIT Rangsit `14.06935, 100.60776`, radius 150 m, grace 300 s) and sign in as `staff@siit.tu.ac.th` / `Staff1234`.
 2. Complete the permission screen: notifications → precise location → **Allow all the time** → battery "Unrestricted".
 3. Emulator → *Extended controls* (⋯) → **Location** → *Routes* → *Import GPX/KML* → `testing/siit-boundary-crossing.gpx` → play (speed 1×).
    The route walks in from 400 m south, stays 7 min, walks out 400 m north and stays 7 min, so it exercises

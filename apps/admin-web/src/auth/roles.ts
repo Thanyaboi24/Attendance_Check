@@ -17,6 +17,7 @@ export interface NavItem {
 /** Navigation and route access per role (mirrors the backend RBAC in docs/API.md, which remains authoritative). */
 export const NAV_ITEMS: readonly NavItem[] = [
   { path: '/dashboard', labelKey: 'dashboard', roles: [AA, SA] },
+  { path: '/signups', labelKey: 'signups', roles: [AA, SA] },
   { path: '/sessions', labelKey: 'sessions', roles: [AA] },
   { path: '/requests', labelKey: 'requests', roles: [AA] },
   { path: '/corrections', labelKey: 'corrections', roles: [AA] },

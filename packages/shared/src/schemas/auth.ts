@@ -4,7 +4,9 @@ import { AccountStatus, Role } from '../enums';
 export const RoleSchema = z.enum([Role.STAFF, Role.ATTENDANCE_ADMIN, Role.SYSTEM_ADMIN]);
 export const AccountStatusSchema = z.enum([
   AccountStatus.PENDING_ACTIVATION,
+  AccountStatus.PENDING_APPROVAL,
   AccountStatus.ACTIVE,
+  AccountStatus.REJECTED,
   AccountStatus.DEACTIVATED,
 ]);
 
@@ -62,6 +64,22 @@ export type ForgotPasswordRequest = z.input<typeof ForgotPasswordRequestSchema>;
 /** Used for both account activation and password reset (single-use, time-limited token). */
 export const SetPasswordWithTokenSchema = z.object({ token: z.string().min(16), password: PasswordSchema });
 export type SetPasswordWithToken = z.infer<typeof SetPasswordWithTokenSchema>;
+
+/**
+ * Staff self-registration from the mobile app. The account is created as STAFF with status
+ * PENDING_APPROVAL and cannot sign in until an administrator approves it.
+ */
+export const SignUpRequestSchema = z.object({
+  staffId: z.string().trim().min(1, 'Enter your staff ID').max(40),
+  email: NormalisedEmail,
+  fullName: z.string().trim().min(1, 'Enter your full name').max(120),
+  department: z.string().trim().min(1, 'Enter your department').max(120),
+  password: PasswordSchema,
+});
+export type SignUpRequest = z.input<typeof SignUpRequestSchema>;
+
+export const SignUpResponseSchema = z.object({ status: z.literal(AccountStatus.PENDING_APPROVAL), email: z.string() });
+export type SignUpResponse = z.infer<typeof SignUpResponseSchema>;
 
 export const OkResponseSchema = z.object({ ok: z.literal(true) });
 export type OkResponse = z.infer<typeof OkResponseSchema>;

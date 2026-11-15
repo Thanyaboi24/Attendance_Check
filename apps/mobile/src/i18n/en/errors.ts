@@ -11,6 +11,9 @@ export default {
     passwordMin: 'Password must be at least 8 characters',
     passwordLetter: 'Password must contain a letter',
     passwordDigit: 'Password must contain a digit',
+    staffIdRequired: 'Enter your staff ID',
+    fullNameRequired: 'Enter your full name',
+    departmentRequired: 'Enter your department',
     invalidInput: 'Invalid input',
   },
 } as const;

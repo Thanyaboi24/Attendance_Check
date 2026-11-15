@@ -1,12 +1,13 @@
 import { LoginRequestSchema } from '@attendance/shared';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
-import React, { useState } from 'react';
+import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, View, type TextInputInstance as NativeTextInput } from 'react-native';
 import { Text, TextInput } from 'react-native-paper';
 import { getDeps } from '../../app/container';
 import { refreshDashboard } from '../../app/controller';
+import type { RootStackParamList } from '../../app/navigation/types';
 import { palette } from '../../app/theme';
 import { BigButton, Notice, Panel } from '../../ui/kit';
 import { validationMessage } from '../../domain/errors';
@@ -14,16 +15,31 @@ import { adminWebMessage, login } from '../../domain/useCases/auth';
 import { META_ONBOARDED } from '../../domain/useCases/common';
 import { useAppStore } from '../../store/appStore';
 
-/** Mockup page 1: institutional email, password, error area, Log in, Forgot password, no public sign-up. */
+/** Message under the form: an error (red) or an account-state notice (amber), optionally with a sign-up link. */
+type LoginMessage = { text: string; tone: 'error' | 'info'; signUpAgain?: boolean };
+
+/** Mockup page 1: institutional email, password, error area, Log in, Forgot password, plus self sign-up. */
 export function LoginScreen() {
   const { t } = useTranslation(['auth', 'errors', 'common']);
   const navigation = useNavigation();
+  const route = useRoute<RouteProp<RootStackParamList, 'Login'>>();
   const notStaffMessage = useAppStore((s) => s.notStaffMessage);
-  const [email, setEmail] = useState('');
+  const prefillEmail = route.params?.email;
+  const [email, setEmail] = useState(prefillEmail ?? '');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<LoginMessage | null>(null);
+  const setError = (text: string | null) => setMessage(text == null ? null : { text, tone: 'error' });
   const [busy, setBusy] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const passwordRef = React.useRef<NativeTextInput>(null);
+
+  // Back from "Request sent": prefill the email that was just registered.
+  useEffect(() => {
+    if (prefillEmail) {
+      setEmail(prefillEmail);
+      setMessage(null);
+    }
+  }, [prefillEmail]);
 
   async function onSubmit() {
     setError(null);
@@ -56,6 +72,18 @@ export function LoginScreen() {
           return;
         case 'ACCOUNT_INACTIVE':
           setError(t('login.inactive'));
+          return;
+        case 'ACCOUNT_PENDING_APPROVAL':
+          setMessage({ text: t('login.pendingApproval'), tone: 'info' });
+          return;
+        case 'ACCOUNT_REJECTED':
+          setMessage({
+            text: [t('login.rejected'), out.reason ? t('login.rejectedReason', { reason: out.reason }) : null, t('login.rejectedHint')]
+              .filter(Boolean)
+              .join('\n'),
+            tone: 'error',
+            signUpAgain: true,
+          });
           return;
         case 'NETWORK':
           setError(t('login.network'));
@@ -91,6 +119,9 @@ export function LoginScreen() {
               autoCapitalize="none"
               autoComplete="email"
               keyboardType="email-address"
+              returnKeyType="next"
+              submitBehavior="submit"
+              onSubmitEditing={() => passwordRef.current?.focus()}
               mode="outlined"
               outlineStyle={styles.inputOutline}
               style={styles.input}
@@ -99,6 +130,7 @@ export function LoginScreen() {
           <View style={{ gap: 8 }}>
             <Text style={styles.label}>{t('login.password')}</Text>
             <TextInput
+              ref={passwordRef}
               accessibilityLabel={t('login.password')}
               value={password}
               onChangeText={setPassword}
@@ -114,13 +146,29 @@ export function LoginScreen() {
                   onPress={() => setShowPassword((v) => !v)}
                 />
               }
-              onSubmitEditing={onSubmit}
+              returnKeyType="go"
+              onSubmitEditing={() => void onSubmit()}
             />
           </View>
-          {error ? (
-            <View style={styles.error} accessibilityLiveRegion="polite">
-              <MaterialCommunityIcons name="alert-circle-outline" size={22} color="#B91C1C" />
-              <Text style={styles.errorText}>{error}</Text>
+          {message ? (
+            <View style={[styles.error, message.tone === 'info' && styles.info]} accessibilityLiveRegion="polite">
+              <MaterialCommunityIcons
+                name={message.tone === 'info' ? 'clock-outline' : 'alert-circle-outline'}
+                size={22}
+                color={message.tone === 'info' ? '#C2410C' : '#B91C1C'}
+              />
+              <View style={{ flex: 1, gap: 8 }}>
+                <Text style={[styles.errorText, message.tone === 'info' && styles.infoText]}>{message.text}</Text>
+                {message.signUpAgain ? (
+                  <Pressable
+                    onPress={() => navigation.navigate('SignUp', { email: email.trim() || undefined })}
+                    accessibilityRole="link"
+                    hitSlop={8}
+                  >
+                    <Text style={styles.link}>{t('login.signUpAgain')}</Text>
+                  </Pressable>
+                ) : null}
+              </View>
             </View>
           ) : null}
           <BigButton onPress={() => void onSubmit()} busy={busy}>
@@ -130,6 +178,13 @@ export function LoginScreen() {
             <Text style={styles.link}>{t('login.forgot')}</Text>
           </Pressable>
         </Panel>
+
+        <View style={styles.signUp}>
+          <Text style={styles.signUpPrompt}>{t('login.noAccount')}</Text>
+          <BigButton variant="outline" onPress={() => navigation.navigate('SignUp')}>
+            {t('login.signUp')}
+          </BigButton>
+        </View>
 
         <Text style={styles.footer}>{t('login.footer')}</Text>
       </ScrollView>
@@ -147,7 +202,11 @@ const styles = StyleSheet.create({
   inputOutline: { borderRadius: 14 },
   input: { backgroundColor: palette.surface },
   error: { flexDirection: 'row', gap: 10, backgroundColor: '#FEF2F2', borderColor: '#FECACA', borderWidth: 1, borderRadius: 14, padding: 14 },
-  errorText: { flex: 1, color: '#991B1B', fontSize: 15, lineHeight: 21 },
+  errorText: { color: '#991B1B', fontSize: 15, lineHeight: 21 },
+  info: { backgroundColor: '#FFF7ED', borderColor: '#FED7AA' },
+  infoText: { color: '#9A3412' },
+  signUp: { gap: 10, marginTop: 4 },
+  signUpPrompt: { textAlign: 'center', color: palette.textSoft, fontSize: 16 },
   link: { color: palette.blue, fontSize: 16, fontWeight: '600', textDecorationLine: 'underline' },
   footer: { textAlign: 'center', color: palette.textMuted, fontSize: 14, lineHeight: 20, marginTop: 24 },
 });

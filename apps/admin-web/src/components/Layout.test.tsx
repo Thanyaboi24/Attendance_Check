@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { screen, within } from '@testing-library/react';
-import { Role } from '@attendance/shared';
+import { Role, type DashboardSummary } from '@attendance/shared';
 import { makeUser, mockApi, renderApp } from '../test/utils';
 
-const summary = {
+const summary: DashboardSummary = {
   date: '2026-11-01',
   activeStaff: 1,
   checkedInNow: 0,
@@ -12,6 +12,7 @@ const summary = {
   manualActionsToday: 0,
   unresolvedRequests: 0,
   pendingCorrections: 0,
+  pendingSignups: 0,
   longOpenSessions: 0,
 };
 
@@ -28,6 +29,7 @@ describe('Role-based navigation', () => {
     renderApp('/dashboard', { signedIn: true });
     expect(await navLinks()).toEqual([
       'Dashboard',
+      'Sign-up requests',
       'Attendance sessions',
       'Attendance requests',
       'Corrections',
@@ -41,7 +43,7 @@ describe('Role-based navigation', () => {
     mockApi({ 'GET /me': { body: makeUser(Role.SYSTEM_ADMIN) }, 'GET /admin/dashboard/summary': { body: summary } });
     renderApp('/dashboard', { signedIn: true });
     const links = await navLinks();
-    expect(links).toEqual(['Dashboard', 'Reports', 'Users', 'Geofence', 'Audit log']);
+    expect(links).toEqual(['Dashboard', 'Sign-up requests', 'Reports', 'Users', 'Geofence', 'Audit log']);
     expect(links).not.toContain('Attendance sessions');
   });
 

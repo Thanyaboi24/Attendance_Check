@@ -6,6 +6,8 @@ import {
   ErrorCode,
   type LoginResponse,
   type SetPasswordWithToken,
+  type SignUpRequest,
+  type SignUpResponse,
   type TokenPair,
   type UserProfile,
 } from '@attendance/shared';
@@ -66,6 +68,19 @@ export class AuthService {
       // Generic message: never reveal whether the email exists (design §7.9).
       throw new AppException(HttpStatus.UNAUTHORIZED, ErrorCode.INVALID_CREDENTIALS, INVALID_CREDENTIALS);
     }
+    // Only after a correct password, so these states never reveal whether an email is registered.
+    if (user.status === AccountStatus.PENDING_APPROVAL) {
+      throw new AppException(
+        HttpStatus.FORBIDDEN,
+        ErrorCode.ACCOUNT_PENDING_APPROVAL,
+        'Your account is waiting for an administrator to approve it.',
+      );
+    }
+    if (user.status === AccountStatus.REJECTED) {
+      throw new AppException(HttpStatus.FORBIDDEN, ErrorCode.ACCOUNT_REJECTED, 'Your account request was not approved.', {
+        reason: user.reviewNote,
+      });
+    }
     if (user.status !== AccountStatus.ACTIVE) {
       throw new AppException(HttpStatus.FORBIDDEN, ErrorCode.ACCOUNT_INACTIVE, 'This account is not active. Contact the system administrator.');
     }
@@ -75,6 +90,55 @@ export class AuthService {
       data: { failedLoginCount: 0, lockedUntil: null, lastLoginAt: now },
     });
     return { tokens: await this.issueTokens(updated), user: toProfile(updated) };
+  }
+
+  /**
+   * Staff self-registration. Creates a STAFF account in PENDING_APPROVAL (password already set); an administrator
+   * approves or rejects it. A previously rejected applicant may apply again with the same email and staff ID.
+   */
+  async signUp(dto: Required<SignUpRequest>): Promise<SignUpResponse> {
+    if (!this.env.SIGNUP_ENABLED) {
+      throw new AppException(HttpStatus.FORBIDDEN, ErrorCode.SIGNUP_DISABLED, 'Sign-up is disabled. Contact the system administrator.');
+    }
+    const email = dto.email.trim().toLowerCase();
+    const domains = this.env.SIGNUP_EMAIL_DOMAINS;
+    if (domains.length > 0 && !domains.includes(email.split('@')[1] ?? '')) {
+      throw new AppException(HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_FAILED, `Use your institutional email (@${domains.join(', @')}).`, {
+        fields: { email: [`Use your institutional email (@${domains.join(', @')})`] },
+      });
+    }
+    const passwordHash = await hashPassword(dto.password);
+    const data = {
+      staffId: dto.staffId.trim(),
+      email,
+      fullName: dto.fullName.trim(),
+      department: dto.department.trim(),
+      passwordHash,
+    };
+
+    const user = await this.prisma.tx(async (tx) => {
+      const existing = await tx.user.findMany({ where: { OR: [{ email }, { staffId: data.staffId }] } });
+      const reapply = existing.length === 1 && existing[0]!.status === AccountStatus.REJECTED && existing[0]!.email === email;
+      if (existing.length > 0 && !reapply) {
+        throw new AppException(
+          HttpStatus.CONFLICT,
+          ErrorCode.DUPLICATE_USER,
+          'An account with this email or staff ID already exists. Sign in, or use "Forgot password?".',
+        );
+      }
+      const saved = reapply
+        ? await tx.user.update({
+            where: { id: existing[0]!.id },
+            data: { ...data, status: AccountStatus.PENDING_APPROVAL, reviewedAt: null, reviewedById: null, reviewNote: null, failedLoginCount: 0, lockedUntil: null },
+          })
+        : await tx.user.create({ data: { ...data, role: 'STAFF', status: AccountStatus.PENDING_APPROVAL, selfRegistered: true } });
+      await this.audit.record(
+        { actorId: saved.id, action: reapply ? 'USER_SIGNUP_RESUBMITTED' : 'USER_SIGNED_UP', entityType: 'User', entityId: saved.id, newValues: toProfile(saved) },
+        tx,
+      );
+      return saved;
+    });
+    return { status: AccountStatus.PENDING_APPROVAL, email: user.email };
   }
 
   private async registerFailure(user: User, now: Date) {

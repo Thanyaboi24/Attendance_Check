@@ -3,6 +3,7 @@ import type { SVGProps } from 'react';
 /** Small stroke icon set (24×24, currentColor). Decorative: always aria-hidden. */
 const PATHS = {
   dashboard: 'M4 13h6V4H4zM14 20h6v-9h-6zM14 4v3h6V4zM4 20h6v-3H4z',
+  signups: 'M15 20v-1.5a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4V20M9 10.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM19 8v6M16 11h6',
   sessions: 'M12 7v5l3 2M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z',
   requests: 'M9 4h6l1 2h3v14H5V6h3zM9 12h6M9 16h4',
   corrections: 'M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4',

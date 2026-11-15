@@ -27,6 +27,7 @@ export default {
   nav: {
     main: 'Main',
     dashboard: 'Dashboard',
+    signups: 'Sign-up requests',
     sessions: 'Attendance sessions',
     requests: 'Attendance requests',
     corrections: 'Corrections',
@@ -81,6 +82,10 @@ export default {
     INVALID_CREDENTIALS: 'Invalid email or password.',
     ACCOUNT_LOCKED: 'This account is temporarily locked after too many failed sign-in attempts.',
     ACCOUNT_INACTIVE: 'This account is not active.',
+    ACCOUNT_PENDING_APPROVAL: 'This account is waiting for an administrator to approve the sign-up request.',
+    ACCOUNT_REJECTED: 'The sign-up request for this account was not approved.',
+    SIGNUP_DISABLED: 'Sign-up is currently disabled.',
+    SIGNUP_NOT_PENDING: 'This sign-up request has already been reviewed.',
     TOKEN_INVALID: 'This link or session is invalid or has expired.',
     FORBIDDEN: 'You do not have permission to perform this action.',
     NOT_FOUND: 'The requested record was not found.',
@@ -112,7 +117,9 @@ export default {
     },
     accountStatus: {
       PENDING_ACTIVATION: 'Pending activation',
+      PENDING_APPROVAL: 'Pending approval',
       ACTIVE: 'Active',
+      REJECTED: 'Rejected',
       DEACTIVATED: 'Deactivated',
     },
     sessionStatus: {
@@ -182,6 +189,10 @@ export default {
       USER_ACTIVE: 'User active',
       USER_DEACTIVATED: 'User deactivated',
       USER_PENDING_ACTIVATION: 'User pending activation',
+      USER_SIGNED_UP: 'Signed up',
+      USER_SIGNUP_RESUBMITTED: 'Sign-up resubmitted',
+      SIGNUP_APPROVED: 'Sign-up approved',
+      SIGNUP_REJECTED: 'Sign-up rejected',
     },
     entityType: {
       AttendanceSession: 'AttendanceSession',

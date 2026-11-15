@@ -13,7 +13,8 @@ export const MAX_GEOFENCE_ZONES = 10;
 
 /** Campus areas seeded in development (centres from OpenStreetMap). */
 export const SIIT_CAMPUSES = [
-  { name: 'SIIT Rangsit campus', centerLat: 14.0693, centerLng: 100.6035 },
+  // SIIT building (OpenStreetMap 'สถาบันเทคโนโลยีนานาชาติสิรินธร', bounding-box centre), not the Faculty of Engineering to its west.
+  { name: 'SIIT Rangsit campus', centerLat: 14.06935, centerLng: 100.60776 },
   { name: 'SIIT Bangkadi campus', centerLat: 13.980481, centerLng: 100.55487 },
 ] as const;
 

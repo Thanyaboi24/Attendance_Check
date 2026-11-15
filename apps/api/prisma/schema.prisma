@@ -20,7 +20,9 @@ enum Role {
 
 enum AccountStatus {
   PENDING_ACTIVATION
+  PENDING_APPROVAL
   ACTIVE
+  REJECTED
   DEACTIVATED
 }
 
@@ -94,6 +96,13 @@ model User {
   failedLoginCount Int           @default(0)
   lockedUntil      DateTime?     @db.Timestamptz(3)
   lastLoginAt      DateTime?     @db.Timestamptz(3)
+  /// Self-registration review (sign-up from the mobile app)
+  selfRegistered   Boolean       @default(false)
+  reviewedAt       DateTime?     @db.Timestamptz(3)
+  reviewedById     String?
+  reviewNote       String?
+  reviewedBy       User?         @relation("SignupReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedSignups  User[]        @relation("SignupReviewer")
   createdAt        DateTime      @default(now()) @db.Timestamptz(3)
   updatedAt        DateTime      @updatedAt @db.Timestamptz(3)
 
@@ -157,21 +166,21 @@ model GeofenceConfiguration {
 }
 
 model AttendanceSession {
-  id                 String        @id @default(uuid())
+  id                 String              @id @default(uuid())
   userId             String
-  checkInAt          DateTime      @db.Timestamptz(3)
+  checkInAt          DateTime            @db.Timestamptz(3)
   checkInMethod      Method
-  checkOutAt         DateTime?     @db.Timestamptz(3)
+  checkOutAt         DateTime?           @db.Timestamptz(3)
   checkOutMethod     Method?
-  status             SessionStatus @default(OPEN)
-  corrected          Boolean       @default(false)
+  status             SessionStatus       @default(OPEN)
+  corrected          Boolean             @default(false)
   /// Values before the first administrative correction (DS2 §2.9.4); full history is in AuditLog.
-  originalCheckInAt  DateTime?     @db.Timestamptz(3)
-  originalCheckOutAt DateTime?     @db.Timestamptz(3)
-  flaggedLongOpenAt  DateTime?     @db.Timestamptz(3)
-  createdAt          DateTime      @default(now()) @db.Timestamptz(3)
-  updatedAt          DateTime      @updatedAt @db.Timestamptz(3)
-  user               User          @relation(fields: [userId], references: [id])
+  originalCheckInAt  DateTime?           @db.Timestamptz(3)
+  originalCheckOutAt DateTime?           @db.Timestamptz(3)
+  flaggedLongOpenAt  DateTime?           @db.Timestamptz(3)
+  createdAt          DateTime            @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime            @updatedAt @db.Timestamptz(3)
+  user               User                @relation(fields: [userId], references: [id])
   requests           AttendanceRequest[]
   corrections        CorrectionRequest[]
 
@@ -217,21 +226,21 @@ model AttendanceRequest {
 }
 
 model LocationEvidence {
-  id                   String         @id @default(uuid())
-  requestId            String         @db.Uuid
+  id                   String            @id @default(uuid())
+  requestId            String            @db.Uuid
   /// CONFIRM | AUTO | CANCEL | UNRESOLVED
   stage                String
   lat                  Float
   lng                  Float
-  measuredAt           DateTime       @db.Timestamptz(3)
+  measuredAt           DateTime          @db.Timestamptz(3)
   accuracyM            Float?
-  isMock               Boolean        @default(false)
+  isMock               Boolean           @default(false)
   /// Computed by the server.
   distanceM            Float?
   classification       LocationClass
   clientDistanceM      Float?
   clientClassification LocationClass?
-  receivedAt           DateTime       @default(now()) @db.Timestamptz(3)
+  receivedAt           DateTime          @default(now()) @db.Timestamptz(3)
   request              AttendanceRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
 
   @@index([requestId])

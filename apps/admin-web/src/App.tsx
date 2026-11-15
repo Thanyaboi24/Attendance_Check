@@ -12,6 +12,7 @@ import { ForgotPasswordPage, SetPasswordPage } from './pages/PasswordPages';
 import { ReportsPage } from './pages/ReportsPage';
 import { RequestDetailPage, RequestsPage } from './pages/RequestsPage';
 import { SessionsPage } from './pages/SessionsPage';
+import { SignupsPage } from './pages/SignupsPage';
 import { UsersPage } from './pages/UsersPage';
 
 const guard = (path: string, el: ReactNode) => <RequireRole roles={rolesFor(path)}>{el}</RequireRole>;
@@ -32,6 +33,7 @@ export function AppRoutes() {
       >
         <Route index element={<HomeRedirect />} />
         <Route path="/dashboard" element={guard('/dashboard', <DashboardPage />)} />
+        <Route path="/signups" element={guard('/signups', <SignupsPage />)} />
         <Route path="/sessions" element={guard('/sessions', <SessionsPage />)} />
         <Route path="/requests" element={guard('/requests', <RequestsPage />)} />
         <Route path="/requests/:id" element={guard('/requests', <RequestDetailPage />)} />

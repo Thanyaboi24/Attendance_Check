@@ -16,6 +16,7 @@ const summary = {
   manualActionsToday: 18,
   unresolvedRequests: 3,
   pendingCorrections: 2,
+  pendingSignups: 0,
   longOpenSessions: 1,
 };
 

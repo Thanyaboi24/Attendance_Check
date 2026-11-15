@@ -20,6 +20,7 @@ export default {
     deactivate: 'ปิดใช้งาน',
     resend: 'ส่งอีกครั้ง',
     cannotDeactivateSelf: 'คุณไม่สามารถปิดใช้งานบัญชีของตนเองได้',
+    reviewSignup: 'คำขอลงทะเบียน',
   },
   flash: {
     statusChanged: 'สถานะของ {{name}} เปลี่ยนเป็น “{{status}}” แล้ว',

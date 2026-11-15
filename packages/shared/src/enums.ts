@@ -12,7 +12,11 @@ export type Role = (typeof Role)[keyof typeof Role];
 
 export const AccountStatus = {
   PENDING_ACTIVATION: 'PENDING_ACTIVATION',
+  /** Self-registered from the mobile app; waits for an administrator to approve it. */
+  PENDING_APPROVAL: 'PENDING_APPROVAL',
   ACTIVE: 'ACTIVE',
+  /** Self-registration refused by an administrator (the person may apply again). */
+  REJECTED: 'REJECTED',
   DEACTIVATED: 'DEACTIVATED',
 } as const;
 export type AccountStatus = (typeof AccountStatus)[keyof typeof AccountStatus];
@@ -89,6 +93,10 @@ export const ErrorCode = {
   INVALID_CREDENTIALS: 'INVALID_CREDENTIALS',
   ACCOUNT_LOCKED: 'ACCOUNT_LOCKED',
   ACCOUNT_INACTIVE: 'ACCOUNT_INACTIVE',
+  ACCOUNT_PENDING_APPROVAL: 'ACCOUNT_PENDING_APPROVAL',
+  ACCOUNT_REJECTED: 'ACCOUNT_REJECTED',
+  SIGNUP_DISABLED: 'SIGNUP_DISABLED',
+  SIGNUP_NOT_PENDING: 'SIGNUP_NOT_PENDING',
   TOKEN_INVALID: 'TOKEN_INVALID',
   FORBIDDEN: 'FORBIDDEN',
   NOT_FOUND: 'NOT_FOUND',

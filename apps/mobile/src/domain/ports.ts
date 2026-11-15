@@ -17,6 +17,8 @@ import type {
   NotificationEventInput,
   RequestType,
   SetPasswordWithToken,
+  SignUpRequest,
+  SignUpResponse,
   TokenPair,
   UnresolvedAttendance,
   UserProfile,
@@ -58,6 +60,8 @@ export interface AttendanceApi {
 
 export interface AuthApi {
   login(body: LoginRequest): Promise<LoginResponse>;
+  /** Staff self-registration; the account waits for administrator approval (no tokens are issued). */
+  signUp(body: SignUpRequest): Promise<SignUpResponse>;
   logout(refreshToken: string): Promise<void>;
   me(): Promise<UserProfile>;
   forgotPassword(email: string): Promise<void>;

@@ -715,7 +715,7 @@ DTO ทุกตัวนิยามด้วย **zod schema** ใน `package
   "geofenceDetectedAt": "2026-11-01T01:28:04Z",
   "notificationPostedAt": "2026-11-01T01:28:05Z",
   "evidence": {
-    "lat": 14.0693, "lng": 100.6035,
+    "lat": 14.06935, "lng": 100.60776,
     "measuredAt": "2026-11-01T01:33:12Z",
     "accuracyM": 12.0,
     "isMock": false,

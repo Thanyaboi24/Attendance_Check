@@ -36,6 +36,8 @@ export function loginErrorMessage(e: unknown): string {
   if (e instanceof ApiRequestError) {
     if (e.status === 423 || e.code === ErrorCode.ACCOUNT_LOCKED) return t('auth:errors.locked');
     if (e.code === ErrorCode.ACCOUNT_INACTIVE) return t('auth:errors.inactive');
+    if (e.code === ErrorCode.ACCOUNT_PENDING_APPROVAL) return t('common:errors.ACCOUNT_PENDING_APPROVAL');
+    if (e.code === ErrorCode.ACCOUNT_REJECTED) return t('common:errors.ACCOUNT_REJECTED');
     if (e.status === 401 || e.status === 400) return t('auth:errors.invalidCredentials');
     if (e.code === NETWORK_ERROR) return errorMessage(e);
   }

@@ -225,7 +225,7 @@ export const GeofenceFormSchema = UpdateGeofenceConfigSchema.extend({
 });
 
 /** Seed location (SIIT Rangsit) used only when no configuration exists yet. */
-const FALLBACK_ZONE: GeofenceZone = { name: 'Main campus', centerLat: 14.0693, centerLng: 100.6035, radiusM: DEFAULT_GEOFENCE.radiusM };
+const FALLBACK_ZONE: GeofenceZone = { name: 'Main campus', centerLat: 14.06935, centerLng: 100.60776, radiusM: DEFAULT_GEOFENCE.radiusM };
 
 export function GeofenceForm({
   current,

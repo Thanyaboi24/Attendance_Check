@@ -12,6 +12,8 @@ export default {
     forgotPassword: 'ลืมรหัสผ่าน',
     activate: 'เปิดใช้งานบัญชี',
     resetPassword: 'ตั้งรหัสผ่านใหม่',
+    signUp: 'สร้างบัญชี',
+    signUpSubmitted: 'ส่งคำขอแล้ว',
     location: 'ตำแหน่ง',
     correction: 'ขอแก้ไขเวลา',
     settings: 'การตั้งค่า',

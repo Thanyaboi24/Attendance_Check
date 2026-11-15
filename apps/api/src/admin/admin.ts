@@ -155,7 +155,7 @@ export class AdminAttendanceService {
     const date = toBangkokDate(now);
     const { start, end } = bangkokDayBounds(date);
     const unresolvedSince = new Date(now.getTime() - 30 * 86_400_000);
-    const [activeStaff, checkedInNow, checkedInToday, automatic, manual, unresolved, pendingCorrections, longOpen] =
+    const [activeStaff, checkedInNow, checkedInToday, automatic, manual, unresolved, pendingCorrections, longOpen, pendingSignups] =
       await Promise.all([
         this.prisma.user.count({ where: { role: 'STAFF', status: 'ACTIVE' } }),
         this.prisma.attendanceSession.count({ where: { status: 'OPEN' } }),
@@ -167,6 +167,7 @@ export class AdminAttendanceService {
         this.prisma.attendanceRequest.count({ where: { status: 'UNRESOLVED', createdAt: { gte: unresolvedSince } } }),
         this.prisma.correctionRequest.count({ where: { status: 'PENDING' } }),
         this.prisma.attendanceSession.count({ where: { status: 'OPEN', checkInAt: { lt: start } } }),
+        this.prisma.user.count({ where: { status: 'PENDING_APPROVAL' } }),
       ]);
     return {
       date,
@@ -178,6 +179,7 @@ export class AdminAttendanceService {
       unresolvedRequests: unresolved,
       pendingCorrections,
       longOpenSessions: longOpen,
+      pendingSignups,
     };
   }
 

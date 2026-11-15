@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { Role } from '@attendance/shared';
+import { Role, type DashboardSummary } from '@attendance/shared';
 import { makeUser, mockApi, renderApp } from '../test/utils';
 
-const base = {
+const base: DashboardSummary = {
   date: '2026-11-15',
   activeStaff: 40,
   checkedInNow: 10,
@@ -13,6 +13,7 @@ const base = {
   manualActionsToday: 4,
   unresolvedRequests: 3,
   pendingCorrections: 0,
+  pendingSignups: 0,
   longOpenSessions: 1,
 };
 
@@ -36,15 +37,25 @@ describe('Dashboard', () => {
     open(Role.ATTENDANCE_ADMIN);
     const list = await screen.findByRole('region', { name: 'Needs attention' });
     const links = within(list).getAllByRole('link');
-    expect(links.map((a) => a.getAttribute('href'))).toEqual(['/requests', '/corrections', '/sessions']);
+    expect(links.map((a) => a.getAttribute('href'))).toEqual(['/requests', '/corrections', '/sessions', '/signups']);
     expect(within(list).queryByText('All clear')).not.toBeInTheDocument();
   });
 
-  it('shows no review links to a System Administrator, and an all-clear state when nothing waits', async () => {
+  it('shows a System Administrator only the sign-up link, and an all-clear state when nothing waits', async () => {
     open(Role.SYSTEM_ADMIN, { ...base, unresolvedRequests: 0, longOpenSessions: 0 });
     const list = await screen.findByRole('region', { name: 'Needs attention' });
     expect(within(list).getByText('All clear')).toBeInTheDocument();
-    expect(within(list).queryAllByRole('link')).toHaveLength(0);
+    expect(within(list).getAllByRole('link').map((a) => a.getAttribute('href'))).toEqual(['/signups']);
+  });
+
+  it('counts pending sign-ups as needing attention and links them for a System Administrator', async () => {
+    open(Role.SYSTEM_ADMIN, { ...base, unresolvedRequests: 0, longOpenSessions: 0, pendingSignups: 2 });
+    const list = await screen.findByRole('region', { name: 'Needs attention' });
+    expect(within(list).queryByText('All clear')).not.toBeInTheDocument();
+    const link = within(list).getByRole('link', { name: /Sign-up requests/ });
+    expect(link).toHaveAttribute('href', '/signups');
+    expect(link).toHaveTextContent('2');
+    expect(link).toHaveTextContent('New staff accounts awaiting approval');
   });
 
   it('shows an empty activity message before anything is approved', async () => {

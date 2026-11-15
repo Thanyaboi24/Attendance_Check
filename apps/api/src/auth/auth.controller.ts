@@ -7,11 +7,13 @@ import {
   LogoutRequestSchema,
   RefreshRequestSchema,
   SetPasswordWithTokenSchema,
+  SignUpRequestSchema,
   type ForgotPasswordRequest,
   type LoginRequest,
   type LogoutRequest,
   type RefreshRequest,
   type SetPasswordWithToken,
+  type SignUpRequest,
   type UserProfile,
 } from '@attendance/shared';
 import { CurrentUser, Public, type AuthUser } from '../common/decorators';
@@ -30,6 +32,14 @@ export class AuthController {
   @HttpCode(200)
   login(@Body(zodPipe(LoginRequestSchema)) dto: LoginRequest) {
     return this.auth.login(dto.email, dto.password);
+  }
+
+  /** Staff self-registration (mobile app). The account must be approved by an administrator before sign-in. */
+  @Public()
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @Post('signup')
+  signUp(@Body(zodPipe(SignUpRequestSchema)) dto: Required<SignUpRequest>) {
+    return this.auth.signUp(dto);
   }
 
   @Public()

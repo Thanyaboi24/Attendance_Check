@@ -54,6 +54,39 @@ export class MailService {
     };
   }
 
+  signupApprovedMail(to: string, fullName: string, note: string | null): SentMail {
+    return {
+      to,
+      subject: 'Your Faculty Attendance account is approved',
+      text:
+        `Dear ${fullName},
+
+Your account request has been approved. You can now sign in to the Faculty Attendance app ` +
+        `with your email and the password you chose.
+` +
+        (note ? `
+Note from the administrator: ${note}
+` : ''),
+    };
+  }
+
+  signupRejectedMail(to: string, fullName: string, reason: string): SentMail {
+    return {
+      to,
+      subject: 'Your Faculty Attendance account request was not approved',
+      text:
+        `Dear ${fullName},
+
+Your account request was not approved.
+
+Reason: ${reason}
+
+` +
+        `You can correct your details and sign up again in the app, or contact the attendance administrator.
+`,
+    };
+  }
+
   resetMail(to: string, fullName: string, token: string, ttlMin: number): SentMail {
     const link = `${this.env.APP_LINK_BASE}/reset-password?token=${encodeURIComponent(token)}`;
     return {

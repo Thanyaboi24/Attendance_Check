@@ -13,12 +13,24 @@ export type LoginOutcome =
   | { kind: 'INVALID_CREDENTIALS' }
   | { kind: 'ACCOUNT_LOCKED' }
   | { kind: 'ACCOUNT_INACTIVE' }
+  /** Self-registered account waiting for an administrator (correct password). */
+  | { kind: 'ACCOUNT_PENDING_APPROVAL' }
+  /** Self-registration refused; the person may sign up again with corrected details. */
+  | { kind: 'ACCOUNT_REJECTED'; reason: string | null }
   | { kind: 'NETWORK' }
   | { kind: 'ERROR'; message: string };
 
 /** Shown to non-STAFF accounts (current language). */
 export function adminWebMessage(): string {
   return t('auth:adminWeb');
+}
+
+function rejectionReason(details: unknown): string | null {
+  if (details && typeof details === 'object' && 'reason' in details) {
+    const reason = (details as { reason: unknown }).reason;
+    if (typeof reason === 'string' && reason.trim() !== '') return reason.trim();
+  }
+  return null;
 }
 
 export async function login(deps: AppDeps, email: string, password: string): Promise<LoginOutcome> {
@@ -29,6 +41,8 @@ export async function login(deps: AppDeps, email: string, password: string): Pro
     if (isApiError(e)) {
       if (e.code === 'ACCOUNT_LOCKED' || e.status === 423) return { kind: 'ACCOUNT_LOCKED' };
       if (e.code === 'ACCOUNT_INACTIVE') return { kind: 'ACCOUNT_INACTIVE' };
+      if (e.code === 'ACCOUNT_PENDING_APPROVAL') return { kind: 'ACCOUNT_PENDING_APPROVAL' };
+      if (e.code === 'ACCOUNT_REJECTED') return { kind: 'ACCOUNT_REJECTED', reason: rejectionReason(e.details) };
       if (e.status === 401 || e.code === 'INVALID_CREDENTIALS' || e.code === 'VALIDATION_FAILED') {
         return { kind: 'INVALID_CREDENTIALS' };
       }

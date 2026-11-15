@@ -47,6 +47,7 @@ const TONE: Record<string, string> = {
   OPEN: 'blue',
   PENDING: 'amber',
   PENDING_ACTIVATION: 'amber',
+  PENDING_APPROVAL: 'amber',
   UNRESOLVED: 'amber',
   CANCELLED: 'grey',
   REJECTED: 'red',

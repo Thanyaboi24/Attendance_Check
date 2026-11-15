@@ -7,6 +7,7 @@ import {
   HistoryResponseSchema,
   LoginResponseSchema,
   OkResponseSchema,
+  SignUpResponseSchema,
   UserProfileSchema,
 } from '@attendance/shared';
 import type { AxiosInstance, AxiosResponse } from 'axios';
@@ -63,6 +64,8 @@ export function createAttendanceApi(http: AxiosInstance): AttendanceApi {
 export function createAuthApi(http: AxiosInstance, publicHttp: AxiosInstance): AuthApi {
   return {
     login: (body) => call(LoginResponseSchema, () => publicHttp.post('/auth/login', body), 'POST /auth/login'),
+    /** Public endpoint (no auth header, no token refresh): creates a PENDING_APPROVAL staff account. */
+    signUp: (body) => call(SignUpResponseSchema, () => publicHttp.post('/auth/signup', body), 'POST /auth/signup'),
     logout: async (refreshToken) => {
       await call(OkResponseSchema, () => publicHttp.post('/auth/logout', { refreshToken }), 'POST /auth/logout');
     },

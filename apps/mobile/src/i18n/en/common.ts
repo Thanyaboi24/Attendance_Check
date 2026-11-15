@@ -10,6 +10,8 @@ export default {
     forgotPassword: 'Forgot password',
     activate: 'Activate account',
     resetPassword: 'Reset password',
+    signUp: 'Create an account',
+    signUpSubmitted: 'Request sent',
     location: 'Location',
     correction: 'Request a correction',
     settings: 'Settings',

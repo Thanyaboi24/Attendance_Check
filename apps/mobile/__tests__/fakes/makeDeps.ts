@@ -1,4 +1,4 @@
-import type { GeofenceConfig, LocationReading, TokenPair, UserProfile } from '@attendance/shared';
+import type { GeofenceConfig, LocationReading, SignUpRequest, TokenPair, UserProfile } from '@attendance/shared';
 import { LocationUnavailableError } from '../../src/domain/errors';
 import type { AppDeps, AuthApi, PermissionSnapshot, PresentResult, SessionStore } from '../../src/domain/ports';
 import { FakeBackend } from './fakeBackend';
@@ -203,11 +203,16 @@ export function makeDeps(opts: { cfg?: GeofenceConfig; now?: Date } = {}) {
   let uuidSeq = 0;
   const sleeps: number[] = [];
 
-  const authApi: AuthApi & { loggedOut: string[]; loginUser: UserProfile } = {
+  const authApi: AuthApi & { loggedOut: string[]; loginUser: UserProfile; signUps: SignUpRequest[] } = {
     loggedOut: [],
     loginUser: STAFF,
+    signUps: [],
     async login() {
       return { tokens: TOKENS, user: this.loginUser };
+    },
+    async signUp(body: SignUpRequest) {
+      this.signUps.push(body);
+      return { status: 'PENDING_APPROVAL' as const, email: body.email };
     },
     async logout(rt: string) {
       this.loggedOut.push(rt);

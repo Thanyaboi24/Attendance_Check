@@ -18,6 +18,7 @@ export default {
     deactivate: 'Deactivate',
     resend: 'Resend',
     cannotDeactivateSelf: 'You cannot deactivate your own account',
+    reviewSignup: 'Sign-up requests',
   },
   flash: {
     statusChanged: '{{name}} is now {{status}}.',

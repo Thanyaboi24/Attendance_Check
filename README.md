@@ -32,6 +32,7 @@ Both apps are available in **English and Thai (ภาษาไทย)**.
 ## Features
 
 **Staff mobile app (Android)**
+- Sign up from the app with staff ID, name, department and institutional email; an administrator approves the account before the first sign-in
 - Automatic check-in/check-out from geofence enter/exit events, with a confirmation notification and a grace period
 - Fresh-location validation before anything is recorded: maximum reading age, accuracy limit and mock-location detection
 - Several attendance areas, such as SIIT Rangsit and SIIT Bangkadi; a staff member can check in at either campus
@@ -43,6 +44,7 @@ Both apps are available in **English and Thai (ภาษาไทย)**.
 - English and Thai, switchable in Settings, with Thai dates in the Buddhist Era year
 
 **Admin web dashboard**
+- Sign-up requests: approve or reject staff self-registrations (a reason is required to reject; the applicant is emailed either way)
 - Today's overview, attendance sessions, attendance requests and their location evidence on a map
 - Correction review (approve/reject with a note)
 - User management: create users, activation emails, lock/unlock and roles
@@ -202,7 +204,7 @@ The seed creates geofence v1 "SIIT campuses" with two areas, each with a radius 
 
 | Area | Centre |
 |---|---|
-| SIIT Rangsit campus | 14.0693, 100.6035 |
+| SIIT Rangsit campus | 14.06935, 100.60776 |
 | SIIT Bangkadi campus | 13.980481, 100.554870 |
 
 The other seeded values: grace period 300 s, maximum reading age 60 s, maximum accuracy 30 m.
@@ -234,6 +236,8 @@ Copy each `.env.example` and fill it in. **Real `.env` and `.env.local` files ar
 | `SMTP_HOST` / `SMTP_PORT` / `MAIL_FROM` | Mailpit | empty `SMTP_HOST` prints emails to the log instead |
 | `EVIDENCE_RETENTION_DAYS` | `365` | how long location evidence is kept |
 | `ENABLE_JOBS` | `true` | scheduled jobs |
+| `SIGNUP_ENABLED` | `true` | staff self sign-up from the mobile app |
+| `SIGNUP_EMAIL_DOMAINS` | empty (any) | comma-separated email domains allowed to sign up, e.g. `siit.tu.ac.th` |
 | `ALLOW_MOCK_LOCATION` | `false` | emulator GPS testing only; the API refuses to start with it in production |
 
 ### `apps/admin-web/.env.local`

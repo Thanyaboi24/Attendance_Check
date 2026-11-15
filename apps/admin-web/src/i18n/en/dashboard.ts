@@ -43,5 +43,6 @@ export default {
     unresolvedRequests: { label: 'Unresolved requests', hint: 'Need review' },
     pendingCorrections: { label: 'Pending corrections', hint: 'Awaiting a decision' },
     longOpenSessions: { label: 'Long open sessions', hint: 'Sessions open unusually long' },
+    pendingSignups: { label: 'Sign-up requests', hint: 'New staff accounts awaiting approval' },
   },
 } as const;

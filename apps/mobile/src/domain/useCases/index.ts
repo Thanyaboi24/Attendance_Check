@@ -3,6 +3,7 @@ export * from './confirmAttendance';
 export * from './evaluateAutoAttendance';
 export * from './handleGeofenceTransition';
 export * from './monitoring';
+export * from './signUp';
 export * from './submitCorrection';
 export * from './submitDecision';
 export * from './syncOutbox';

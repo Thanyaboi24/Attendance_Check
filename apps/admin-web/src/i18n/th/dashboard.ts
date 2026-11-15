@@ -45,5 +45,6 @@ export default {
     unresolvedRequests: { label: 'คำขอที่สรุปผลไม่ได้', hint: 'ต้องตรวจสอบ' },
     pendingCorrections: { label: 'คำขอแก้ไขเวลาที่รอการตรวจสอบ', hint: 'รอการตัดสินใจ' },
     longOpenSessions: { label: 'รอบที่ไม่ลงเวลาออกนานผิดปกติ', hint: 'รอบการลงเวลาที่เปิดค้างนานผิดปกติ' },
+    pendingSignups: { label: 'คำขอลงทะเบียน', hint: 'บัญชีบุคลากรใหม่ที่รออนุมัติ' },
   },
 } satisfies Messages<typeof en>;

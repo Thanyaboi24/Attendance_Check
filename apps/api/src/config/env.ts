@@ -38,6 +38,21 @@ const EnvSchema = z.object({
     .enum(['true', 'false'])
     .default('false')
     .transform((v) => v === 'true'),
+  /** Staff self-registration from the mobile app (accounts still need an administrator's approval). */
+  SIGNUP_ENABLED: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((v) => v === 'true'),
+  /** Comma-separated email domains allowed to sign up, e.g. "siit.tu.ac.th". Empty = any domain. */
+  SIGNUP_EMAIL_DOMAINS: z
+    .string()
+    .default('')
+    .transform((v) =>
+      v
+        .split(',')
+        .map((d) => d.trim().toLowerCase().replace(/^@/, ''))
+        .filter(Boolean),
+    ),
   TRUST_PROXY: z
     .enum(['true', 'false'])
     .default('false')

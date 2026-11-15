@@ -19,7 +19,8 @@ Times are UTC ISO-8601 strings; calendar dates (`YYYY-MM-DD`) are Asia/Bangkok d
 
 | Method | Path | Body | Response | Notes |
 |---|---|---|---|---|
-| POST | `/auth/login` | `LoginRequestSchema` | `LoginResponse` | `401 INVALID_CREDENTIALS` (generic message, never reveals whether the email exists), `423 ACCOUNT_LOCKED` after 5 failures in 15 min, `403 ACCOUNT_INACTIVE`. Any role may log in; the **mobile app** shows "use the Admin Web" for non-STAFF roles, the **admin web** rejects STAFF. |
+| POST | `/auth/login` | `LoginRequestSchema` | `LoginResponse` | `401 INVALID_CREDENTIALS` (generic message, never reveals whether the email exists), `423 ACCOUNT_LOCKED` after 5 failures in 15 min, `403 ACCOUNT_INACTIVE`, `403 ACCOUNT_PENDING_APPROVAL` (self sign-up not reviewed yet), `403 ACCOUNT_REJECTED` with `details.reason`. These 403s are only returned after a correct password. Any role may log in; the **mobile app** shows "use the Admin Web" for non-STAFF roles, the **admin web** rejects STAFF. |
+| POST | `/auth/signup` | `SignUpRequestSchema` | `201 SignUpResponse` `{ status: 'PENDING_APPROVAL', email }` | Staff self-registration from the mobile app: creates a `STAFF` account that cannot sign in until an administrator approves it. `409 DUPLICATE_USER`; `400 VALIDATION_FAILED` if the email domain is not in `SIGNUP_EMAIL_DOMAINS`; `403 SIGNUP_DISABLED` when `SIGNUP_ENABLED=false`. A rejected applicant may sign up again with the same email (back to `PENDING_APPROVAL`). Rate limit 5/min. |
 | POST | `/auth/refresh` | `RefreshRequestSchema` | `TokenPair` | `401 TOKEN_INVALID` |
 | POST | `/auth/logout` | `LogoutRequestSchema` | `{ ok: true }` | revokes the refresh token |
 | POST | `/auth/password/forgot` | `ForgotPasswordRequestSchema` | `{ ok: true }` | always 200; sends a single-use link (30 min) |
@@ -89,9 +90,12 @@ Official attendance time is always the server approval time (never backdated). E
 | POST | `/admin/corrections/{id}/review` | AA | `ReviewCorrectionSchema` | `CorrectionDto`; APPROVE updates/creates the session (`ADMIN_CORRECTED`) in the same transaction + audit log. `409 CORRECTION_NOT_PENDING` |
 | GET | `/admin/reports/attendance.csv` | AA | `?from&to&department?` | `text/csv` (Bangkok times) |
 | GET | `/admin/reports/evaluation.csv` | AA, SA | `?from&to` | `text/csv`, one row per attendance request with every timestamp of design §8.3, device, config version, distance, classification — for the DS2 chapter-3 metrics |
+| GET | `/admin/signups` | AA, SA | `SignupListQuerySchema` (`status` default `PENDING_APPROVAL`; `REJECTED`, `ACTIVE`) | `Paginated<SignupDto>` (self-registered accounts, oldest pending first) |
+| POST | `/admin/signups/{id}/approve` | AA, SA | `ApproveSignupSchema` `{ note? }` | `SignupDto` (status `ACTIVE`, audit `SIGNUP_APPROVED`, email to the applicant). `409 SIGNUP_NOT_PENDING` |
+| POST | `/admin/signups/{id}/reject` | AA, SA | `RejectSignupSchema` `{ reason }` | `SignupDto` (status `REJECTED`, audit `SIGNUP_REJECTED`, email with the reason). `409 SIGNUP_NOT_PENDING` |
 | GET | `/admin/users` | SA | `UserListQuerySchema` | `Paginated<AdminUserDto>` |
 | POST | `/admin/users` | SA | `CreateUserSchema` | `201 AdminUserDto` (status `PENDING_ACTIVATION`, activation email sent). `409` on duplicate staffId/email |
-| PATCH | `/admin/users/{id}` | SA | `UpdateUserSchema` | `AdminUserDto`; deactivation revokes refresh tokens |
+| PATCH | `/admin/users/{id}` | SA | `UpdateUserSchema` | `AdminUserDto`; deactivation revokes refresh tokens. Status changes of pending/rejected sign-ups are refused (`409 SIGNUP_NOT_PENDING`): use the sign-up review |
 | POST | `/admin/users/{id}/resend-activation` | SA | — | `{ ok: true }` |
 | GET | `/admin/geofence/configs` | AA, SA | — | `GeofenceConfig[]` newest first |
 | PUT | `/admin/geofence/config` | SA | `UpdateGeofenceConfigSchema` | `GeofenceConfig` (new version) |
@@ -119,4 +123,4 @@ for older clients. The phone registers one Android geofence per area (`faculty-v
 | `attendance.admin@siit.tu.ac.th` | `Admin1234` | ATTENDANCE_ADMIN |
 | `system.admin@siit.tu.ac.th` | `Admin1234` | SYSTEM_ADMIN |
 
-Seed geofence v1: SIIT Rangsit, centre `14.0693, 100.6035`, radius 150 m, grace 300 s, max age 60 s, max accuracy 30 m.
+Seed geofence v1: SIIT Rangsit, centre `14.06935, 100.60776`, radius 150 m, grace 300 s, max age 60 s, max accuracy 30 m.

@@ -8,7 +8,11 @@ export type MainTabParamList = {
 
 export type RootStackParamList = {
   // auth stack
-  Login: undefined;
+  /** `email` prefills the form (after a sign-up request was sent). */
+  Login: { email?: string } | undefined;
+  /** `email` prefills the form (signing up again after a rejection). */
+  SignUp: { email?: string } | undefined;
+  SignUpSubmitted: { email: string };
   ForgotPassword: undefined;
   Activate: { token?: string };
   ResetPassword: { token?: string };
