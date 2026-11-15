@@ -4,6 +4,38 @@ import type { Messages } from '../types';
 export default {
   title: 'ภาพรวม',
   today: 'วันนี้ (เวลากรุงเทพฯ): {{date}}',
+  greeting: {
+    morning: 'อรุณสวัสดิ์ คุณ{{name}}',
+    afternoon: 'สวัสดีตอนบ่าย คุณ{{name}}',
+    evening: 'สวัสดีตอนเย็น คุณ{{name}}',
+  },
+  bangkokTime: 'เวลากรุงเทพฯ',
+  live: 'อัปเดตอัตโนมัติ',
+  updated: 'ล่าสุด {{time}} น.',
+  refresh: 'รีเฟรช',
+  presence: {
+    title: 'อยู่ในพื้นที่ขณะนี้',
+    ring: 'ลงเวลาเข้าแล้ว {{now}} จาก {{total}} คน',
+    share: '{{percent}}% ของบุคลากรที่ใช้งานอยู่',
+    nobody: 'ขณะนี้ยังไม่มีผู้ลงเวลาเข้า',
+  },
+  todayProgress: 'วันนี้ลงเวลาเข้าแล้ว {{percent}}% ของบุคลากรที่ใช้งานอยู่',
+  activity: {
+    title: 'การลงเวลาวันนี้',
+    subtitle: 'การลงเวลาเข้าและออกที่อนุมัติแล้ว',
+    total_one: 'รายการ',
+    total_other: 'รายการ',
+    automatic: 'อัตโนมัติ',
+    manual: 'ยืนยันเอง',
+    empty: 'วันนี้ยังไม่มีการลงเวลาเข้าหรือออกที่อนุมัติ',
+    split: 'อัตโนมัติ {{auto}} รายการ ยืนยันเอง {{manual}} รายการ',
+  },
+  attention: {
+    title: 'ต้องดำเนินการ',
+    allClear: 'ไม่มีรายการค้าง',
+    allClearHint: 'ไม่มีรายการที่รอการตรวจสอบ',
+    open: 'เปิด',
+  },
   cards: {
     activeStaff: { label: 'บุคลากรที่ใช้งานอยู่', hint: 'บัญชีที่มีสถานะใช้งานอยู่' },
     checkedInNow: { label: 'ลงเวลาเข้าแล้วขณะนี้', hint: 'รอบการลงเวลาที่ยังไม่ลงเวลาออก' },

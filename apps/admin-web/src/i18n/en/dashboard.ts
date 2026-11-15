@@ -2,6 +2,38 @@
 export default {
   title: 'Dashboard',
   today: 'Today (Bangkok): {{date}}',
+  greeting: {
+    morning: 'Good morning, {{name}}',
+    afternoon: 'Good afternoon, {{name}}',
+    evening: 'Good evening, {{name}}',
+  },
+  bangkokTime: 'Bangkok time',
+  live: 'Live',
+  updated: 'Updated {{time}}',
+  refresh: 'Refresh',
+  presence: {
+    title: 'On campus now',
+    ring: '{{now}} of {{total}} active staff are checked in',
+    share: '{{percent}}% of active staff',
+    nobody: 'No one is checked in right now',
+  },
+  todayProgress: '{{percent}}% of active staff checked in today',
+  activity: {
+    title: "Today's activity",
+    subtitle: 'Approved check-ins and check-outs',
+    total_one: 'action',
+    total_other: 'actions',
+    automatic: 'Automatic',
+    manual: 'Manual',
+    empty: 'No check-ins or check-outs approved yet today.',
+    split: 'Automatic {{auto}}, manual {{manual}}',
+  },
+  attention: {
+    title: 'Needs attention',
+    allClear: 'All clear',
+    allClearHint: 'Nothing is waiting for review.',
+    open: 'Open',
+  },
   cards: {
     activeStaff: { label: 'Active staff', hint: 'Accounts with status Active' },
     checkedInNow: { label: 'Checked in now', hint: 'Open attendance sessions' },
