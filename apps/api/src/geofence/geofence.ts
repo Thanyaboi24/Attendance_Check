@@ -1,10 +1,14 @@
 import { Body, Controller, Get, Injectable, Module, Param, ParseIntPipe, Put } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import type { GeofenceConfiguration } from '@prisma/client';
+import type { GeofenceConfiguration, Prisma } from '@prisma/client';
 import {
+  GeofenceZoneSchema,
   Role,
   UpdateGeofenceConfigSchema,
+  zonesOf,
   type GeofenceConfig,
+  type GeofenceParams,
+  type GeofenceZone,
   type UpdateGeofenceConfig,
 } from '@attendance/shared';
 import { AuditService } from '../audit/audit.service';
@@ -13,6 +17,17 @@ import { CurrentUser, Roles, type AuthUser } from '../common/decorators';
 import { zodPipe } from '../common/zod-validation.pipe';
 import { PrismaService } from '../prisma/prisma.service';
 
+/** The areas stored on a version; rows without `zones` (older versions) are one circle named after the version. */
+export function configZones(c: GeofenceConfiguration): GeofenceZone[] {
+  const parsed = GeofenceZoneSchema.array().min(1).safeParse(c.zones);
+  return parsed.success ? parsed.data : zonesOf({ ...c, zones: null });
+}
+
+/** What the shared classifier needs: every area plus the location quality limits. */
+export function geofenceParams(c: GeofenceConfiguration): GeofenceParams {
+  return { ...c, zones: configZones(c) };
+}
+
 export function toConfigDto(c: GeofenceConfiguration): GeofenceConfig {
   return {
     version: c.version,
@@ -20,6 +35,7 @@ export function toConfigDto(c: GeofenceConfiguration): GeofenceConfig {
     centerLat: c.centerLat,
     centerLng: c.centerLng,
     radiusM: c.radiusM,
+    zones: configZones(c),
     gracePeriodSec: c.gracePeriodSec,
     maxLocationAgeSec: c.maxLocationAgeSec,
     maxAccuracyM: c.maxAccuracyM,
@@ -55,8 +71,20 @@ export class GeofenceService {
   async update(actorId: string, dto: UpdateGeofenceConfig): Promise<GeofenceConfiguration> {
     return this.prisma.tx(async (tx) => {
       const previous = await tx.geofenceConfiguration.findFirst({ orderBy: { version: 'desc' } });
-      const { reason, ...values } = dto;
-      const created = await tx.geofenceConfiguration.create({ data: { ...values, reason, createdById: actorId } });
+      const { reason, zones, ...values } = dto;
+      const primary = zones[0]!;
+      const created = await tx.geofenceConfiguration.create({
+        data: {
+          ...values,
+          // The first area is mirrored into the single-circle columns for older readers.
+          centerLat: primary.centerLat,
+          centerLng: primary.centerLng,
+          radiusM: primary.radiusM,
+          zones: zones as unknown as Prisma.InputJsonValue,
+          reason,
+          createdById: actorId,
+        },
+      });
       await this.audit.record(
         {
           actorId,

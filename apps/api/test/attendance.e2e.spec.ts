@@ -263,9 +263,7 @@ describe('Attendance processing (e2e)', () => {
     const sa = await actor(ctx, 'SYSTEM_ADMIN');
     const put = await sa.put('/admin/geofence/config', {
       name: 'Tighter',
-      centerLat: 14.0693,
-      centerLng: 100.6035,
-      radiusM: 30,
+      zones: [{ name: 'Rangsit', centerLat: 14.0693, centerLng: 100.6035, radiusM: 30 }],
       gracePeriodSec: 120,
       maxLocationAgeSec: 60,
       maxAccuracyM: 30,
@@ -279,6 +277,37 @@ describe('Attendance processing (e2e)', () => {
     const r = await staff.post(`/attendance/requests/${requestId}/confirm`, confirmBody(ctx, INSIDE), requestId);
     expect(r.body.status).toBe('APPROVED');
     expect((await ctx.prisma.attendanceRequest.findUniqueOrThrow({ where: { id: requestId } })).configVersion).toBe(1);
+  });
+
+  it('a version with two campuses approves a check-in at the second campus and rejects one between them', async () => {
+    const sa = await actor(ctx, 'SYSTEM_ADMIN');
+    const put = await sa.put('/admin/geofence/config', {
+      name: 'SIIT campuses',
+      zones: [
+        { name: 'Rangsit', centerLat: 14.0693, centerLng: 100.6035, radiusM: 150 },
+        { name: 'Bangkadi', centerLat: 13.980481, centerLng: 100.55487, radiusM: 150 },
+      ],
+      gracePeriodSec: 300,
+      maxLocationAgeSec: 60,
+      maxAccuracyM: 30,
+      reason: 'Add the Bangkadi campus',
+    });
+    expect(put.status).toBe(200);
+    expect(put.body).toMatchObject({ version: 2, centerLat: 14.0693, radiusM: 150 });
+    expect(put.body.zones.map((z: { name: string }) => z.name)).toEqual(['Rangsit', 'Bangkadi']);
+    expect((await staff.get('/geofence/config/1')).body.zones).toHaveLength(1);
+
+    const at = (lat: number, lng: number) => {
+      const now = ctx.clock.now().toISOString();
+      return { userConfirmedAt: now, clientRecordedAt: now, evidence: { lat, lng, accuracyM: 10, measuredAt: now, isMock: false } };
+    };
+    const between = await createRequest(ctx, staff, 'CHECK_IN', { configVersion: 2 });
+    const r1 = await staff.post(`/attendance/requests/${between.requestId}/confirm`, at(14.03, 100.58), between.requestId);
+    expect(r1.status).toBe(422);
+    expect(r1.body.details.classification).toBe('CONFIRMED_OUTSIDE');
+
+    const r2 = await staff.post(`/attendance/requests/${between.requestId}/confirm`, at(13.98055, 100.55495), between.requestId);
+    expect(r2.body.status).toBe('APPROVED');
   });
 
   it('validates bodies and the idempotency key', async () => {

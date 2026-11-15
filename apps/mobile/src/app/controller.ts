@@ -1,7 +1,7 @@
 import { NotificationEventType } from '@attendance/shared';
 import * as Notifications from 'expo-notifications';
 import { META_ONBOARDED, recordNotificationEvent } from '../domain/useCases/common';
-import { ADMIN_WEB_MESSAGE, bootstrap } from '../domain/useCases/auth';
+import { adminWebMessage, bootstrap } from '../domain/useCases/auth';
 import { ensureMonitoring } from '../domain/useCases/monitoring';
 import { getActiveConfig } from '../domain/useCases/common';
 import { syncOutbox } from '../domain/useCases/syncOutbox';
@@ -39,7 +39,7 @@ export async function runBootstrap(reason: 'APP_START' | 'FOREGROUND'): Promise<
     store.setOnboarded(onboarded);
     const out = await bootstrap(deps, { reason });
     if (out.kind === 'SIGNED_OUT') store.setSignedOut();
-    else if (out.kind === 'NOT_STAFF') store.setSignedOut(ADMIN_WEB_MESSAGE);
+    else if (out.kind === 'NOT_STAFF') store.setSignedOut(adminWebMessage());
     else {
       store.setSignedIn(out.user);
       store.setMonitoring(out.monitoring);

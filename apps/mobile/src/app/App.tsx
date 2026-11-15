@@ -9,6 +9,7 @@ import React, { useEffect } from 'react';
 import { AppState, useColorScheme } from 'react-native';
 import { PaperProvider } from 'react-native-paper';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { t } from '../i18n';
 import { setupNotifications } from '../services/notifications';
 import { useAppStore } from '../store/appStore';
 import { onLocalDataChanged } from '../utils/events';
@@ -40,7 +41,7 @@ function useAppLifecycle() {
     void runBootstrap('APP_START');
 
     const unsubData = onLocalDataChanged(() => void refreshDashboard());
-    const unsubAuth = onAuthLost(() => useAppStore.getState().setSignedOut('Your session expired. Please sign in again.'));
+    const unsubAuth = onAuthLost(() => useAppStore.getState().setSignedOut(t('auth:sessionExpired')));
 
     // Re-validate on foreground: config version change → re-register geofence; sync the outbox.
     const appStateSub = AppState.addEventListener('change', (s) => {

@@ -2,6 +2,7 @@ import { AttendanceState, RequestType, toBangkokDate } from '@attendance/shared'
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import React, { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { ActivityIndicator, Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,8 +11,9 @@ import { palette } from '../../app/theme';
 import { displayStatusOf, reasonText } from '../../domain/displayStatus';
 import { useAppStore } from '../../store/appStore';
 import { fmtDateTime, fmtTime, MonitoringBanner, STATE_LABEL, StatusChip } from '../../ui/components';
+import { dayMonth } from '../../i18n/format';
 import { BigButton, mono, Panel } from '../../ui/kit';
-import { dayLabel, METHOD_LABEL } from '../history/historyModel';
+import { methodLabel } from '../history/historyModel';
 import { LocationCard } from '../locationMap/LocationCard';
 import { autoRequirementNote } from '../locationMap/locationModel';
 import { useDisplayFix } from '../locationMap/useDisplayFix';
@@ -22,16 +24,17 @@ import { useConfirmFlow } from './useConfirmFlow';
 
 /** "Synced" / "N waiting" / "Offline" pill in the header (pages 3–4). */
 function SyncPill({ pending, failed, online }: { pending: number; failed: number; online: boolean }) {
+  const { t } = useTranslation('dashboard');
   const [bg, fg, text] =
     failed > 0
-      ? ['#FEE2E2', '#B91C1C', `${failed} failed`]
+      ? ['#FEE2E2', '#B91C1C', t('sync.failed', { n: String(failed) })]
       : pending > 0
-        ? ['#EDE9FE', '#6D28D9', `${pending} waiting`]
+        ? ['#EDE9FE', '#6D28D9', t('sync.waiting', { n: String(pending) })]
         : online
-          ? [palette.greenSoft, palette.greenText, 'Synced']
-          : [palette.graySoft, palette.textSoft, 'Offline'];
+          ? [palette.greenSoft, palette.greenText, t('sync.synced')]
+          : [palette.graySoft, palette.textSoft, t('sync.offline')];
   return (
-    <View style={[styles.syncPill, { backgroundColor: bg }]} accessibilityLabel={`Synchronisation: ${text}`}>
+    <View style={[styles.syncPill, { backgroundColor: bg }]} accessibilityLabel={t('sync.a11y', { status: text })}>
       <View style={[styles.dot, { backgroundColor: fg }]} />
       <Text style={[styles.syncText, { color: fg }]}>{text}</Text>
     </View>
@@ -64,6 +67,7 @@ function TimeBox({ title, time, sub }: { title: string; time: string | null; sub
 
 /** Mockup pages 3–4 (design §12.4): status or pending request, location, today's timeline, sync banner. */
 export function DashboardScreen() {
+  const { t } = useTranslation('dashboard');
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const user = useAppStore((s) => s.user);
@@ -83,8 +87,8 @@ export function DashboardScreen() {
       void refreshDashboard();
       setNow(new Date());
       // Keeps "Updated 2 min ago" current while the screen is visible.
-      const t = setInterval(() => setNow(new Date()), 30_000);
-      return () => clearInterval(t);
+      const timer = setInterval(() => setNow(new Date()), 30_000);
+      return () => clearInterval(timer);
     }, []),
   );
 
@@ -114,7 +118,7 @@ export function DashboardScreen() {
   // An open session may have started on an earlier day; it is still the one to show.
   const first = model.openSession ?? todaySessions[0] ?? null;
   /** "Manual", or "1 Nov · Manual" when the time is not from today. */
-  const sub = (iso: string, method: string) => (toBangkokDate(iso) === today ? method : `${dayLabel(toBangkokDate(iso)).slice(4)} · ${method}`);
+  const sub = (iso: string, method: string) => (toBangkokDate(iso) === today ? method : t('dateMethod', { date: dayMonth(toBangkokDate(iso)), method }));
   const lastOutSession = [...todaySessions].reverse().find((s) => s.checkOutAt) ?? null;
   const pending = model.pending;
   const issues = model.recent.filter((r) => ['FAILED', 'UNCERTAIN_LOCATION'].includes(displayStatusOf(r)));
@@ -130,11 +134,11 @@ export function DashboardScreen() {
     >
       <View style={styles.header}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.welcome}>Welcome, {user?.fullName ?? 'Staff'}</Text>
-          <Text style={styles.title}>Attendance</Text>
+          <Text style={styles.welcome}>{t('welcome', { name: user?.fullName ?? t('staff') })}</Text>
+          <Text style={styles.title}>{t('title')}</Text>
         </View>
         <View style={styles.headerRight}>
-          <Pressable onPress={() => navigation.navigate('Settings')} accessibilityRole="button" accessibilityLabel="Settings" hitSlop={10} style={styles.gear}>
+          <Pressable onPress={() => navigation.navigate('Settings')} accessibilityRole="button" accessibilityLabel={t('settings')} hitSlop={10} style={styles.gear}>
             <MaterialCommunityIcons name="cog-outline" size={26} color={palette.textSoft} />
           </Pressable>
           <SyncPill pending={model.outboxCount} failed={model.failedOutboxCount} online={online} />
@@ -148,8 +152,8 @@ export function DashboardScreen() {
       ) : (
         <Panel style={{ gap: 16 }}>
           <View style={styles.rowBetween}>
-            <Text style={styles.label}>Current status</Text>
-            <Text style={styles.muted}>Staff ID {user?.staffId}</Text>
+            <Text style={styles.label}>{t('currentStatus')}</Text>
+            <Text style={styles.muted}>{t('staffId', { id: user?.staffId ?? '' })}</Text>
           </View>
           <View style={styles.stateRow}>
             <View style={[styles.stateIcon, { backgroundColor: look.bg }]}>
@@ -159,19 +163,21 @@ export function DashboardScreen() {
               <Text style={[styles.state, { color: checkedIn ? palette.greenText : palette.text }]}>{STATE_LABEL[model.state]}</Text>
               <Text style={styles.muted}>
                 {model.openSession
-                  ? `Session open since ${toBangkokDate(model.openSession.checkInAt) === today ? fmtTime(model.openSession.checkInAt) : fmtDateTime(model.openSession.checkInAt)}`
+                  ? t('sessionOpenSince', {
+                      time: toBangkokDate(model.openSession.checkInAt) === today ? fmtTime(model.openSession.checkInAt) : fmtDateTime(model.openSession.checkInAt),
+                    })
                   : model.snapshotFetchedAt
-                    ? `Updated from the server at ${fmtTime(model.snapshotFetchedAt)}`
-                    : 'Not synchronised yet'}
+                    ? t('updatedFromServer', { time: fmtTime(model.snapshotFetchedAt) })
+                    : t('notSynced')}
               </Text>
             </View>
           </View>
           <View style={styles.times}>
-            <TimeBox title="Check-in" time={first ? fmtTime(first.checkInAt) : null} sub={first ? sub(first.checkInAt, METHOD_LABEL[first.checkInMethod]) : 'Not yet'} />
+            <TimeBox title={t('checkIn')} time={first ? fmtTime(first.checkInAt) : null} sub={first ? sub(first.checkInAt, methodLabel(first.checkInMethod)) : t('notYet')} />
             <TimeBox
-              title="Check-out"
+              title={t('checkOut')}
               time={lastOutSession?.checkOutAt ? fmtTime(lastOutSession.checkOutAt) : null}
-              sub={lastOutSession?.checkOutAt && lastOutSession.checkOutMethod ? sub(lastOutSession.checkOutAt, METHOD_LABEL[lastOutSession.checkOutMethod]) : 'Not yet'}
+              sub={lastOutSession?.checkOutAt && lastOutSession.checkOutMethod ? sub(lastOutSession.checkOutAt, methodLabel(lastOutSession.checkOutMethod)) : t('notYet')}
             />
           </View>
         </Panel>
@@ -191,12 +197,12 @@ export function DashboardScreen() {
 
       {timeline.length > 0 ? (
         <Panel style={{ gap: 14 }}>
-          <Text style={styles.label}>Today</Text>
-          {timeline.map((t, i) => (
-            <View key={`${t.at}-${i}`} style={styles.timelineRow}>
-              <Text style={[styles.timelineTime, mono]}>{t.time}</Text>
-              <View style={[styles.timelineDot, { backgroundColor: TONE_DOT[t.tone] }]} />
-              <Text style={styles.timelineText}>{t.text}</Text>
+          <Text style={styles.label}>{t('today')}</Text>
+          {timeline.map((item, i) => (
+            <View key={`${item.at}-${i}`} style={styles.timelineRow}>
+              <Text style={[styles.timelineTime, mono]}>{item.time}</Text>
+              <View style={[styles.timelineDot, { backgroundColor: TONE_DOT[item.tone] }]} />
+              <Text style={styles.timelineText}>{item.text}</Text>
             </View>
           ))}
         </Panel>
@@ -204,7 +210,7 @@ export function DashboardScreen() {
 
       {issues.length > 0 ? (
         <Panel style={{ gap: 12 }}>
-          <Text style={styles.label}>Needs attention</Text>
+          <Text style={styles.label}>{t('needsAttention')}</Text>
           {issues.slice(0, 3).map((r) => (
             <Pressable
               key={r.requestId}
@@ -213,19 +219,19 @@ export function DashboardScreen() {
                 navigation.navigate('Correction', {
                   workDate: toBangkokDate(r.geofenceDetectedAt),
                   requestId: r.requestId,
-                  statusLabel: 'Unresolved',
+                  statusLabel: t('unresolved'),
                 })
               }
               accessibilityRole="button"
             >
               <View style={styles.rowBetween}>
                 <Text style={styles.issueTitle}>
-                  {r.type === RequestType.CHECK_IN ? 'Check-in' : 'Check-out'} · {fmtDateTime(r.geofenceDetectedAt)}
+                  {t('issueTitle', { type: r.type === RequestType.CHECK_IN ? t('checkIn') : t('checkOut'), time: fmtDateTime(r.geofenceDetectedAt) })}
                 </Text>
                 <StatusChip status={displayStatusOf(r)} compact />
               </View>
               <Text style={styles.muted}>{reasonText(r.resolutionReason ?? r.lastError) ?? ''}</Text>
-              <Text style={styles.link}>Request a correction</Text>
+              <Text style={styles.link}>{t('requestCorrection')}</Text>
             </Pressable>
           ))}
         </Panel>
@@ -234,19 +240,19 @@ export function DashboardScreen() {
       {!pending && checkedIn ? (
         <View style={{ gap: 10 }}>
           <BigButton variant="outline" disabled onPress={() => undefined}>
-            Check out now
+            {t('checkOutNow')}
           </BigButton>
-          <Text style={[styles.muted, { textAlign: 'center' }]}>Check-out is available once you are outside the area.</Text>
+          <Text style={[styles.muted, { textAlign: 'center' }]}>{t('checkOutLater')}</Text>
         </View>
       ) : null}
 
       {model.outboxCount + model.failedOutboxCount > 0 ? (
-        <Pressable style={styles.syncBanner} onPress={() => void syncNow()} accessibilityRole="button" accessibilityHint="Synchronise now">
+        <Pressable style={styles.syncBanner} onPress={() => void syncNow()} accessibilityRole="button" accessibilityHint={t('sync.syncNowHint')}>
           <MaterialCommunityIcons name="sync" size={22} color={palette.textSoft} />
           <Text style={styles.syncBannerText}>
             {model.failedOutboxCount > 0
-              ? `Synchronization failed · ${model.failedOutboxCount} action${model.failedOutboxCount === 1 ? '' : 's'} · tap to retry`
-              : `Pending synchronization · ${model.outboxCount} action${model.outboxCount === 1 ? '' : 's'} waiting`}
+              ? t('sync.bannerFailed', { count: model.failedOutboxCount })
+              : t('sync.bannerPending', { count: model.outboxCount })}
           </Text>
         </Pressable>
       ) : null}
@@ -280,7 +286,7 @@ const styles = StyleSheet.create({
   dot: { width: 9, height: 9, borderRadius: 5 },
   syncText: { fontSize: 15, fontWeight: '700' },
   rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
-  label: { fontSize: 15, fontWeight: '700', color: palette.textSoft },
+  label: { flexShrink: 1, fontSize: 15, fontWeight: '700', color: palette.textSoft },
   muted: { fontSize: 14, lineHeight: 20, color: palette.textMuted },
   stateRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },
   stateIcon: { width: 64, height: 64, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },

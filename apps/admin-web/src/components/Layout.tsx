@@ -1,8 +1,11 @@
 import { NavLink, Outlet } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/AuthContext';
-import { navFor, ROLE_LABEL } from '../auth/roles';
+import { navFor, navLabel, roleLabel } from '../auth/roles';
+import { LanguageSwitch } from '../i18n/LanguageSwitch';
 
 export function Layout() {
+  const { t } = useTranslation();
   const { user, logout } = useAuth();
   const items = navFor(user?.role);
   return (
@@ -13,14 +16,14 @@ export function Layout() {
             <circle cx="16" cy="16" r="12" fill="none" stroke="currentColor" strokeWidth="3" />
             <circle cx="16" cy="16" r="4" fill="currentColor" />
           </svg>
-          <span>Attendance Admin</span>
+          <span>{t('appName')}</span>
         </div>
-        <nav aria-label="Main">
+        <nav aria-label={t('nav.main')}>
           <ul>
             {items.map((n) => (
               <li key={n.path}>
                 <NavLink to={n.path} className={({ isActive }) => (isActive ? 'active' : undefined)}>
-                  {n.label}
+                  {navLabel(n)}
                 </NavLink>
               </li>
             ))}
@@ -30,12 +33,13 @@ export function Layout() {
           {user ? (
             <>
               <div className="user-name">{user.fullName}</div>
-              <div className="muted small">{ROLE_LABEL[user.role]}</div>
+              <div className="muted small">{roleLabel(user.role)}</div>
             </>
           ) : null}
           <button type="button" className="btn btn-ghost btn-block" onClick={() => void logout()}>
-            Sign out
+            {t('actions.signOut')}
           </button>
+          <LanguageSwitch className="sidebar-lang" />
         </div>
       </aside>
       <main className="content">

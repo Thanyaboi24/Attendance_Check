@@ -1,14 +1,16 @@
 import type { ReactNode } from 'react';
 import { Link, Navigate, useLocation } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import type { Role } from '@attendance/shared';
 import { useAuth } from '../auth/AuthContext';
 import { navFor } from '../auth/roles';
 import { Loading } from './ui';
 
 export function RequireAuth({ children }: { children: ReactNode }) {
+  const { t } = useTranslation();
   const { status } = useAuth();
   const location = useLocation();
-  if (status === 'loading') return <Loading label="Restoring session…" />;
+  if (status === 'loading') return <Loading label={t('restoringSession')} />;
   if (status !== 'authenticated') return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   return <>{children}</>;
 }
@@ -20,11 +22,12 @@ export function RequireRole({ roles, children }: { roles: readonly Role[]; child
 }
 
 export function Forbidden() {
+  const { t } = useTranslation();
   return (
     <div className="card narrow">
-      <h1>Not available for your role</h1>
-      <p>Your account does not have access to this page. Use the navigation to open a page available to you.</p>
-      <Link to="/">Go to the start page</Link>
+      <h1>{t('forbidden.title')}</h1>
+      <p>{t('forbidden.body')}</p>
+      <Link to="/">{t('forbidden.link')}</Link>
     </div>
   );
 }

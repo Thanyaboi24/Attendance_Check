@@ -145,10 +145,12 @@ describe('Auth, accounts and administration (e2e)', () => {
 
     it('validates geofence changes (radius ≤ 1000 m, reason required)', async () => {
       const sa = await actor(ctx, 'SYSTEM_ADMIN');
-      const base = { name: 'X', centerLat: 14, centerLng: 100, gracePeriodSec: 300, maxLocationAgeSec: 60, maxAccuracyM: 30, reason: 'test change' };
-      expect((await sa.put('/admin/geofence/config', { ...base, radiusM: 1500 })).status).toBe(400);
-      expect((await sa.put('/admin/geofence/config', { ...base, radiusM: 200, reason: '' })).status).toBe(400);
-      const ok = await sa.put('/admin/geofence/config', { ...base, radiusM: 200 });
+      const base = { name: 'X', gracePeriodSec: 300, maxLocationAgeSec: 60, maxAccuracyM: 30, reason: 'test change' };
+      const zones = (radiusM: number) => [{ name: 'Main', centerLat: 14, centerLng: 100, radiusM }];
+      expect((await sa.put('/admin/geofence/config', { ...base, zones: zones(1500) })).status).toBe(400);
+      expect((await sa.put('/admin/geofence/config', { ...base, zones: zones(200), reason: '' })).status).toBe(400);
+      expect((await sa.put('/admin/geofence/config', { ...base, zones: [] })).status).toBe(400);
+      const ok = await sa.put('/admin/geofence/config', { ...base, zones: zones(200) });
       expect(ok.body.version).toBe(2);
       const history = await sa.get('/admin/geofence/configs');
       expect(history.body.map((c: { version: number }) => c.version)).toEqual([2, 1]);

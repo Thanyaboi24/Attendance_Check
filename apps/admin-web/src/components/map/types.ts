@@ -14,9 +14,19 @@ export interface MapEvidence {
   label: string;
 }
 
+/** Another attendance area of the same version, drawn for context (never editable). */
+export interface MapArea {
+  name: string;
+  center: LatLng;
+  radiusM: number;
+}
+
 export interface GeofenceMapProps {
   center: LatLng;
   radiusM: number;
+  /** Name shown on the centre marker of the main circle. */
+  areaName?: string;
+  otherAreas?: MapArea[];
   evidence?: MapEvidence[];
   /** When provided the centre can be moved by clicking the map (and dragging the circle on Google Maps). */
   onCenterChange?: (c: LatLng) => void;
@@ -55,4 +65,13 @@ export function fromOffsetM(origin: LatLng, x: number, y: number): LatLng {
 /** Round to ~1 cm precision so form values stay readable. */
 export function roundCoord(v: number): number {
   return Math.round(v * 1e7) / 1e7;
+}
+
+/** Area whose edge is closest to `p` (a point inside an area has a negative edge distance). */
+export function nearestArea<T extends { centerLat: number; centerLng: number; radiusM: number }>(zones: readonly T[], p: LatLng): T {
+  const edge = (z: T) => {
+    const o = offsetM({ lat: z.centerLat, lng: z.centerLng }, p);
+    return Math.hypot(o.x, o.y) - z.radiusM;
+  };
+  return zones.reduce((best, z) => (edge(z) < edge(best) ? z : best));
 }

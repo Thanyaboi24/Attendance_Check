@@ -1,0 +1,45 @@
+import type en from '../en/corrections';
+import type { Messages } from '../types';
+
+export default {
+  title: 'คำขอแก้ไขเวลา',
+  subtitle: 'คำขอจากบุคลากรเพื่อแก้ไขการลงเวลาที่ขาดหายหรือไม่ถูกต้อง',
+  emptyPending: 'ไม่มีคำขอแก้ไขเวลาที่รอการตรวจสอบ',
+  empty: 'ไม่พบคำขอแก้ไขเวลา',
+  col: {
+    submitted: 'วันที่ยื่น',
+    staff: 'บุคลากร',
+    workDate: 'วันที่ปฏิบัติงาน',
+    requestedIn: 'เวลาเข้าที่ขอ',
+    requestedOut: 'เวลาออกที่ขอ',
+    reason: 'เหตุผล',
+    status: 'สถานะ',
+  },
+  reviewedBy: 'โดย {{name}}, {{time}}',
+  review: {
+    title: 'ตรวจสอบคำขอแก้ไขเวลา',
+    approve: 'อนุมัติ',
+    reject: 'ไม่อนุมัติ',
+    staff: 'บุคลากร',
+    workDate: 'วันที่ปฏิบัติงาน',
+    requested: 'เวลาที่ขอ',
+    requestedValue: 'เข้า {{in}} · ออก {{out}}',
+    reason: 'เหตุผล',
+    decision: 'ผลการพิจารณา',
+    adjustHint: 'ปรับเวลาได้หากจำเป็น (เวลากรุงเทพฯ) การอนุมัติจะปรับปรุงหรือสร้างรอบการลงเวลา',
+    checkIn: 'ลงเวลาเข้า',
+    checkOut: 'ลงเวลาออก',
+    checkInDate: 'วันที่ลงเวลาเข้า',
+    checkInTime: 'เวลาลงเวลาเข้า',
+    checkOutDate: 'วันที่ลงเวลาออก',
+    checkOutTime: 'เวลาลงเวลาออก',
+    noteLabel: 'หมายเหตุถึงบุคลากร (จำเป็น)',
+    noteAria: 'หมายเหตุการตรวจสอบ',
+  },
+  validation: {
+    noteRequired: 'โปรดระบุหมายเหตุ (อย่างน้อย 3 ตัวอักษร)',
+    enterBoth: 'โปรดกรอกทั้งวันที่และเวลา',
+    needTime: 'โปรดระบุเวลาลงเวลาเข้า เวลาลงเวลาออก หรือทั้งสองอย่าง',
+    outBeforeIn: 'เวลาลงเวลาออกต้องไม่ก่อนเวลาลงเวลาเข้า',
+  },
+} satisfies Messages<typeof en>;

@@ -16,9 +16,11 @@
     "@hookform/resolvers": "^5.2.2",
     "@tanstack/react-query": "^5.90.0",
     "@vis.gl/react-google-maps": "^1.5.0",
+    "i18next": "^25.10.10",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "react-hook-form": "^7.62.0",
+    "react-i18next": "^15.7.4",
     "react-router": "^7.9.0",
     "zod": "^4.6.7"
   },

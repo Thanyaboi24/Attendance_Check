@@ -5,6 +5,8 @@ import {
   formatBangkokTime,
   toBangkokDate,
 } from '@attendance/shared';
+import { i18n, t } from '../i18n';
+import type { en } from '../i18n/en';
 
 /** `YYYY-MM-DD HH:mm` in Asia/Bangkok, or an em dash. */
 export function fmtDateTime(iso: string | null | undefined): string {
@@ -46,18 +48,34 @@ export function humanize(value: string | null | undefined): string {
     .join(' ');
 }
 
-const METHOD_LABEL: Record<string, string> = {
-  MANUAL: 'Manual',
-  AUTOMATIC: 'Automatic',
-  ADMIN_CORRECTED: 'Corrected',
-};
-export function methodLabel(m: string | null | undefined): string {
-  return m ? (METHOD_LABEL[m] ?? humanize(m)) : '—';
+export type EnumGroup = keyof (typeof en)['common']['enum'];
+
+/**
+ * Display label of an API enum value (`APPROVED`, `CHECK_IN`, …) in the current language.
+ * Values without a translation fall back to `humanize` (still readable, never blank).
+ */
+export function enumLabel(
+  group: EnumGroup,
+  value: string | null | undefined,
+  fallback: (v: string) => string = humanize,
+): string {
+  if (!value) return '—';
+  const key = `common:enum.${group}.${value}`;
+  return i18n.exists(key) ? (t as unknown as (k: string) => string)(key) : fallback(value);
 }
 
+export function methodLabel(m: string | null | undefined): string {
+  return enumLabel('method', m);
+}
+
+/** Distance with the unit of the current language (`150 m` / `150 ม.`, `1.20 km` / `1.20 กม.`). */
 export function fmtMetres(m: number | null | undefined): string {
   if (m == null || !Number.isFinite(m)) return '—';
-  return m >= 1000 ? `${(m / 1000).toFixed(2)} km` : `${Math.round(m)} m`;
+  return m >= 1000 ? t('common:units.km', { value: (m / 1000).toFixed(2) }) : t('common:units.m', { value: String(Math.round(m)) });
+}
+
+export function fmtSeconds(s: number): string {
+  return t('common:units.sec', { value: String(s) });
 }
 
 /** Trigger a browser download of a blob. */

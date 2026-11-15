@@ -1,0 +1,56 @@
+/** English UI text: auth (sign-in, password and activation pages). th/auth.ts must have the same keys. */
+export default {
+  email: 'Email',
+  password: 'Password',
+  login: {
+    title: 'Attendance Admin',
+    subtitle: 'Sign in with your institutional account.',
+    submit: 'Sign in',
+    submitting: 'Signing in…',
+    forgot: 'Forgot your password?',
+    enterPassword: 'Enter your password',
+    sessionExpired: 'Your session has expired. Please sign in again.',
+  },
+  errors: {
+    staffNotAllowed: 'This dashboard is for administrators; please use the mobile app.',
+    locked:
+      'This account is temporarily locked after too many failed sign-in attempts. Please try again in 15 minutes or reset your password.',
+    inactive: 'This account is not active. Activate it from the link in your email or contact a system administrator.',
+    invalidCredentials: 'Invalid email or password.',
+    failed: 'Sign-in failed. Please try again.',
+  },
+  forgot: {
+    title: 'Reset your password',
+    sent: 'If an account exists for that address, a reset link has been sent. The link is valid for 30 minutes.',
+    intro: 'Enter your institutional email and we will send you a reset link.',
+    submit: 'Send reset link',
+    backToSignIn: 'Back to sign in',
+  },
+  setPassword: {
+    activateTitle: 'Activate your account',
+    resetTitle: 'Choose a new password',
+    invalidActivationLink:
+      'This activation link is invalid or has expired. Ask a system administrator to resend the activation email.',
+    invalidResetLink: 'This reset link is invalid or has expired. Request a new one.',
+    activated: 'Your account is active.',
+    changed: 'Your password has been changed.',
+    done: 'Staff members can now sign in on the mobile app; administrators can <link>sign in here</link>.',
+    newPassword: 'New password',
+    confirmPassword: 'Confirm password',
+    requirements: 'Password requirements',
+    activateSubmit: 'Activate account',
+    resetSubmit: 'Set password',
+    requestNewLink: 'Request a new link',
+    goToSignIn: 'Go to sign in',
+    mismatch: 'Passwords do not match',
+  },
+  rules: {
+    minLength: 'At least 8 characters',
+    letter: 'Contains a letter',
+    digit: 'Contains a digit',
+    errMinLength: 'Password must be at least 8 characters',
+    errLetter: 'Password must contain a letter',
+    errDigit: 'Password must contain a digit',
+    errMaxLength: 'Password must be at most 128 characters',
+  },
+} as const;

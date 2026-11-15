@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import { Role, type DashboardSummary } from '@attendance/shared';
 import { api } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
@@ -7,24 +8,23 @@ import { ErrorBox, Loading, PageHeader } from '../components/ui';
 
 interface Card {
   key: keyof Omit<DashboardSummary, 'date'>;
-  label: string;
-  hint: string;
   link?: string;
   warn?: boolean;
 }
 
 const CARDS: Card[] = [
-  { key: 'activeStaff', label: 'Active staff', hint: 'Accounts with status Active' },
-  { key: 'checkedInNow', label: 'Checked in now', hint: 'Open attendance sessions' },
-  { key: 'checkedInToday', label: 'Checked in today', hint: 'Staff with a session today' },
-  { key: 'automaticActionsToday', label: 'Automatic actions today', hint: 'Approved after the grace period' },
-  { key: 'manualActionsToday', label: 'Manual actions today', hint: 'Confirmed from the notification' },
-  { key: 'unresolvedRequests', label: 'Unresolved requests', hint: 'Need review', link: '/requests', warn: true },
-  { key: 'pendingCorrections', label: 'Pending corrections', hint: 'Awaiting a decision', link: '/corrections', warn: true },
-  { key: 'longOpenSessions', label: 'Long open sessions', hint: 'Sessions open unusually long', link: '/sessions', warn: true },
+  { key: 'activeStaff' },
+  { key: 'checkedInNow' },
+  { key: 'checkedInToday' },
+  { key: 'automaticActionsToday' },
+  { key: 'manualActionsToday' },
+  { key: 'unresolvedRequests', link: '/requests', warn: true },
+  { key: 'pendingCorrections', link: '/corrections', warn: true },
+  { key: 'longOpenSessions', link: '/sessions', warn: true },
 ];
 
 export function DashboardPage() {
+  const { t } = useTranslation(['dashboard', 'common']);
   const { user } = useAuth();
   const q = useQuery({
     queryKey: ['dashboard-summary'],
@@ -35,7 +35,7 @@ export function DashboardPage() {
 
   return (
     <>
-      <PageHeader title="Dashboard" subtitle={q.data ? `Today (Bangkok): ${q.data.date}` : undefined} />
+      <PageHeader title={t('title')} subtitle={q.data ? t('today', { date: q.data.date }) : undefined} />
       {q.isPending ? <Loading /> : null}
       <ErrorBox error={q.error} />
       {q.data ? (
@@ -45,8 +45,8 @@ export function DashboardPage() {
             const body = (
               <>
                 <div className="card-value">{value}</div>
-                <div className="card-label">{c.label}</div>
-                <div className="muted small">{c.hint}</div>
+                <div className="card-label">{t(`cards.${c.key}.label`)}</div>
+                <div className="muted small">{t(`cards.${c.key}.hint`)}</div>
               </>
             );
             const cls = `stat${c.warn && value > 0 ? ' stat-warn' : ''}`;

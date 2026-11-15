@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ApiRequestError, errorMessage } from '../api/client';
-import { humanize } from '../lib/format';
+import { enumLabel, humanize, type EnumGroup } from '../lib/format';
 
 export function PageHeader({ title, subtitle, actions }: { title: string; subtitle?: ReactNode; actions?: ReactNode }) {
   return (
@@ -15,20 +16,22 @@ export function PageHeader({ title, subtitle, actions }: { title: string; subtit
 }
 
 export function ErrorBox({ error, title }: { error: unknown; title?: string }) {
+  const { t } = useTranslation();
   if (!error) return null;
   const forbidden = error instanceof ApiRequestError && error.isForbidden;
   return (
     <div className="alert alert-error" role="alert">
       {title ? <strong>{title}: </strong> : null}
-      {forbidden ? 'Your role does not have access to this information.' : errorMessage(error)}
+      {forbidden ? t('errors.noAccess') : errorMessage(error)}
     </div>
   );
 }
 
-export function Loading({ label = 'Loading…' }: { label?: string }) {
+export function Loading({ label }: { label?: string }) {
+  const { t } = useTranslation();
   return (
     <div className="loading" role="status">
-      <span className="spinner" aria-hidden /> {label}
+      <span className="spinner" aria-hidden /> {label ?? t('loading')}
     </div>
   );
 }
@@ -56,10 +59,22 @@ const TONE: Record<string, string> = {
   ADMIN_CORRECTED: 'amber',
 };
 
-export function Badge({ value, label, tone }: { value?: string | null; label?: string; tone?: string }) {
+/** Status pill. `kind` names the enum the value belongs to so it is shown translated. */
+export function Badge({
+  value,
+  label,
+  tone,
+  kind,
+}: {
+  value?: string | null;
+  label?: string;
+  tone?: string;
+  kind?: EnumGroup;
+}) {
+  useTranslation(); // re-render on language change
   if (!value && !label) return <span className="muted">—</span>;
-  const t = tone ?? (value ? TONE[value] : undefined) ?? 'grey';
-  return <span className={`badge badge-${t}`}>{label ?? humanize(value)}</span>;
+  const tn = tone ?? (value ? TONE[value] : undefined) ?? 'grey';
+  return <span className={`badge badge-${tn}`}>{label ?? (kind ? enumLabel(kind, value) : humanize(value))}</span>;
 }
 
 export function Pagination({
@@ -73,22 +88,19 @@ export function Pagination({
   total: number;
   onPage: (p: number) => void;
 }) {
+  const { t } = useTranslation();
   const pages = Math.max(1, Math.ceil(total / pageSize));
   const first = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const last = Math.min(total, page * pageSize);
   return (
-    <nav className="pagination" aria-label="Pagination">
-      <span className="muted">
-        {first}–{last} of {total}
-      </span>
+    <nav className="pagination" aria-label={t('pagination.label')}>
+      <span className="muted">{t('pagination.range', { first: String(first), last: String(last), total: String(total) })}</span>
       <button type="button" className="btn btn-ghost" disabled={page <= 1} onClick={() => onPage(page - 1)}>
-        ‹ Previous
+        {t('pagination.previous')}
       </button>
-      <span>
-        Page {page} / {pages}
-      </span>
+      <span>{t('pagination.page', { page: String(page), pages: String(pages) })}</span>
       <button type="button" className="btn btn-ghost" disabled={page >= pages} onClick={() => onPage(page + 1)}>
-        Next ›
+        {t('pagination.next')}
       </button>
     </nav>
   );
@@ -108,6 +120,7 @@ export function Dialog({
   footer?: ReactNode;
   wide?: boolean;
 }) {
+  const { t } = useTranslation();
   const titleId = useId();
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -129,7 +142,7 @@ export function Dialog({
       >
         <div className="dialog-head">
           <h2 id={titleId}>{title}</h2>
-          <button type="button" className="btn btn-ghost btn-icon" aria-label="Close" onClick={onClose}>
+          <button type="button" className="btn btn-ghost btn-icon" aria-label={t('actions.close')} onClick={onClose}>
             ×
           </button>
         </div>
@@ -159,6 +172,7 @@ export function ConfirmDialog({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <Dialog
       title={title}
@@ -166,7 +180,7 @@ export function ConfirmDialog({
       footer={
         <>
           <button type="button" className="btn btn-ghost" onClick={onCancel}>
-            Cancel
+            {t('actions.cancel')}
           </button>
           <button
             type="button"

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
 import {
   AdminEditSessionSchema,
@@ -12,12 +13,15 @@ import {
   type Paginated,
 } from '@attendance/shared';
 import { api } from '../api/client';
+import { t } from '../i18n';
 import { Badge, Dialog, Empty, ErrorBox, FieldError, Loading, PageHeader, Pagination } from '../components/ui';
-import { bangkokInputsToIso, fmtTime, isoToBangkokInputs, lastDays, methodLabel } from '../lib/format';
+import { bangkokInputsToIso, enumLabel, fmtTime, isoToBangkokInputs, lastDays, methodLabel } from '../lib/format';
+import { msg } from '../lib/validation';
 
 const PAGE_SIZE = 25;
 
 export function SessionsPage() {
+  const { t } = useTranslation(['sessions', 'common']);
   const initial = lastDays(7);
   const [from, setFrom] = useState(initial.from);
   const [to, setTo] = useState(initial.to);
@@ -43,56 +47,56 @@ export function SessionsPage() {
 
   return (
     <>
-      <PageHeader title="Attendance sessions" subtitle="All times are Asia/Bangkok." />
+      <PageHeader title={t('title')} subtitle={t('subtitle')} />
       <div className="filters">
         <label className="field">
-          <span>From</span>
+          <span>{t('common:filters.from')}</span>
           <input type="date" value={from} onChange={(e) => resetPage(setFrom)(e.target.value)} />
         </label>
         <label className="field">
-          <span>To</span>
+          <span>{t('common:filters.to')}</span>
           <input type="date" value={to} onChange={(e) => resetPage(setTo)(e.target.value)} />
         </label>
         <label className="field grow">
-          <span>Search</span>
+          <span>{t('common:filters.search')}</span>
           <input
             type="search"
-            placeholder="Name, staff ID or email"
+            placeholder={t('common:filters.nameStaffIdOrEmail')}
             value={q}
             onChange={(e) => resetPage(setQ)(e.target.value)}
           />
         </label>
         <label className="field">
-          <span>Department</span>
+          <span>{t('common:filters.department')}</span>
           <input value={department} onChange={(e) => resetPage(setDepartment)(e.target.value)} />
         </label>
         <label className="field">
-          <span>Status</span>
+          <span>{t('common:filters.status')}</span>
           <select value={status} onChange={(e) => resetPage(setStatus)(e.target.value)}>
-            <option value="">All</option>
-            <option value={SessionStatus.OPEN}>Open</option>
-            <option value={SessionStatus.COMPLETED}>Completed</option>
+            <option value="">{t('common:filters.all')}</option>
+            <option value={SessionStatus.OPEN}>{enumLabel('sessionStatus', SessionStatus.OPEN)}</option>
+            <option value={SessionStatus.COMPLETED}>{enumLabel('sessionStatus', SessionStatus.COMPLETED)}</option>
           </select>
         </label>
       </div>
-      {rangeInvalid ? <div className="alert alert-error">“From” must not be after “To”.</div> : null}
+      {rangeInvalid ? <div className="alert alert-error">{t('rangeInvalid')}</div> : null}
       <ErrorBox error={list.error} />
       {list.isPending && !rangeInvalid ? <Loading /> : null}
       {list.data ? (
         list.data.items.length === 0 ? (
-          <Empty>No sessions match these filters.</Empty>
+          <Empty>{t('empty')}</Empty>
         ) : (
           <>
             <div className="table-wrap">
               <table>
                 <thead>
                   <tr>
-                    <th>Staff</th>
-                    <th>Department</th>
-                    <th>Date</th>
-                    <th>Check in</th>
-                    <th>Check out</th>
-                    <th>Status</th>
+                    <th>{t('col.staff')}</th>
+                    <th>{t('col.department')}</th>
+                    <th>{t('col.date')}</th>
+                    <th>{t('col.checkIn')}</th>
+                    <th>{t('col.checkOut')}</th>
+                    <th>{t('col.status')}</th>
                     <th />
                   </tr>
                 </thead>
@@ -121,11 +125,11 @@ export function SessionsPage() {
                         )}
                       </td>
                       <td>
-                        <Badge value={s.status} /> {s.corrected ? <Badge label="Corrected" tone="amber" /> : null}
+                        <Badge value={s.status} kind="sessionStatus" /> {s.corrected ? <Badge label={t('corrected')} tone="amber" /> : null}
                       </td>
                       <td className="right">
                         <button type="button" className="btn btn-small" onClick={() => setEditing(s)}>
-                          Edit
+                          {t('common:actions.edit')}
                         </button>
                       </td>
                     </tr>
@@ -143,16 +147,21 @@ export function SessionsPage() {
 }
 
 const EditForm = z.object({
-  inDate: z.string().min(1, 'Required'),
-  inTime: z.string().min(1, 'Required'),
+  inDate: z.string().min(1, msg(() => t('sessions:validation.required'))),
+  inTime: z.string().min(1, msg(() => t('sessions:validation.required'))),
   outDate: z.string(),
   outTime: z.string(),
-  reason: z.string().trim().min(3, 'A reason is required (at least 3 characters)').max(1000),
+  reason: z
+    .string()
+    .trim()
+    .min(3, msg(() => t('sessions:validation.reasonRequired')))
+    .max(1000),
 });
 type EditForm = z.infer<typeof EditForm>;
 
 /** Edit check-in/out times (entered in Bangkok time) with a mandatory reason → PATCH. */
 export function SessionEditDialog({ session, onClose }: { session: AdminSessionDto; onClose: () => void }) {
+  const { t } = useTranslation(['sessions', 'common']);
   const qc = useQueryClient();
   const inParts = isoToBangkokInputs(session.checkInAt);
   const outParts = isoToBangkokInputs(session.checkOutAt);
@@ -177,13 +186,13 @@ export function SessionEditDialog({ session, onClose }: { session: AdminSessionD
 
   const onSubmit = handleSubmit((v) => {
     const checkInAt = bangkokInputsToIso(v.inDate, v.inTime);
-    if (!checkInAt) return setError('inTime', { message: 'Enter the check-in date and time' });
-    if (!!v.outDate !== !!v.outTime) return setError('outTime', { message: 'Enter both the date and the time' });
+    if (!checkInAt) return setError('inTime', { message: t('validation.enterCheckIn') });
+    if (!!v.outDate !== !!v.outTime) return setError('outTime', { message: t('validation.enterBoth') });
     const checkOutAt = bangkokInputsToIso(v.outDate, v.outTime);
     if (session.checkOutAt && !checkOutAt)
-      return setError('outTime', { message: 'A completed session needs a check-out time' });
+      return setError('outTime', { message: t('validation.needsCheckOut') });
     if (checkOutAt && Date.parse(checkOutAt) < Date.parse(checkInAt))
-      return setError('outTime', { message: 'Check-out cannot be before check-in' });
+      return setError('outTime', { message: t('validation.outBeforeIn') });
 
     const sameMinute = (a: string | null, b: string | null) =>
       a === b || (!!a && !!b && Math.floor(Date.parse(a) / 60_000) === Math.floor(Date.parse(b) / 60_000));
@@ -191,55 +200,67 @@ export function SessionEditDialog({ session, onClose }: { session: AdminSessionD
     if (!sameMinute(checkInAt, session.checkInAt)) body.checkInAt = checkInAt;
     if (!sameMinute(checkOutAt, session.checkOutAt)) body.checkOutAt = checkOutAt;
     const parsed = AdminEditSessionSchema.safeParse(body);
-    if (!parsed.success) return setError('root', { message: parsed.error.issues[0]?.message ?? 'Invalid input' });
+    if (!parsed.success) {
+      // The shared schema's messages are English; show ours for the cases a valid form can still hit.
+      const issue = parsed.error.issues[0];
+      const message =
+        issue?.path[0] === 'reason'
+          ? t('validation.reasonRequired')
+          : issue?.path.length === 0
+            ? t('validation.nothingToChange')
+            : t('common:validation.invalidInput');
+      return setError('root', { message });
+    }
     save.mutate(parsed.data);
   });
 
   return (
     <Dialog
-      title={`Edit session — ${session.user.fullName}`}
+      title={t('edit.title', { name: session.user.fullName })}
       onClose={onClose}
       footer={
         <>
           <button type="button" className="btn btn-ghost" onClick={onClose}>
-            Cancel
+            {t('common:actions.cancel')}
           </button>
           <button type="submit" form="session-edit" className="btn btn-primary" disabled={save.isPending}>
-            Save correction
+            {t('edit.save')}
           </button>
         </>
       }
     >
       <form id="session-edit" onSubmit={onSubmit} noValidate>
-        <p className="muted small">Enter times in Bangkok time (UTC+7). The record will be marked as corrected and logged.</p>
+        <p className="muted small">{t('edit.intro')}</p>
         <fieldset className="grid-2">
-          <legend>Check in</legend>
+          <legend>{t('edit.checkIn')}</legend>
           <label className="field">
-            <span>Date</span>
-            <input type="date" aria-label="Check-in date" {...register('inDate')} />
+            <span>{t('edit.date')}</span>
+            <input type="date" aria-label={t('edit.checkInDate')} {...register('inDate')} />
             <FieldError message={errors.inDate?.message} />
           </label>
           <label className="field">
-            <span>Time</span>
-            <input type="time" aria-label="Check-in time" {...register('inTime')} />
+            <span>{t('edit.time')}</span>
+            <input type="time" aria-label={t('edit.checkInTime')} {...register('inTime')} />
             <FieldError message={errors.inTime?.message} />
           </label>
         </fieldset>
         <fieldset className="grid-2">
-          <legend>Check out {session.status === SessionStatus.OPEN ? '(leave empty to keep the session open)' : ''}</legend>
+          <legend>
+            {t('edit.checkOut')} {session.status === SessionStatus.OPEN ? t('edit.keepOpen') : ''}
+          </legend>
           <label className="field">
-            <span>Date</span>
-            <input type="date" aria-label="Check-out date" {...register('outDate')} />
+            <span>{t('edit.date')}</span>
+            <input type="date" aria-label={t('edit.checkOutDate')} {...register('outDate')} />
           </label>
           <label className="field">
-            <span>Time</span>
-            <input type="time" aria-label="Check-out time" {...register('outTime')} />
+            <span>{t('edit.time')}</span>
+            <input type="time" aria-label={t('edit.checkOutTime')} {...register('outTime')} />
             <FieldError message={errors.outTime?.message} />
           </label>
         </fieldset>
         <label className="field">
-          <span>Reason (required)</span>
-          <textarea rows={3} aria-label="Reason" {...register('reason')} />
+          <span>{t('edit.reasonLabel')}</span>
+          <textarea rows={3} aria-label={t('edit.reasonAria')} {...register('reason')} />
           <FieldError message={errors.reason?.message} />
         </label>
         <FieldError message={errors.root?.message} />

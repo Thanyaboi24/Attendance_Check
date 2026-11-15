@@ -31,6 +31,7 @@ import { zodPipe } from '../common/zod-validation.pipe';
 import { CorrectionsModule } from '../corrections/corrections';
 import { SessionCorrectionService } from '../corrections/session-correction.service';
 import { lockUser, PrismaService } from '../prisma/prisma.service';
+import { configZones } from '../geofence/geofence';
 import { attendanceCsv, evaluationCsv } from './csv';
 
 type AdminSessionQuery = z.infer<typeof AdminSessionQuerySchema>;
@@ -142,6 +143,7 @@ export class AdminAttendanceService {
         centerLat: r.config.centerLat,
         centerLng: r.config.centerLng,
         radiusM: r.config.radiusM,
+        zones: configZones(r.config),
         maxLocationAgeSec: r.config.maxLocationAgeSec,
         maxAccuracyM: r.config.maxAccuracyM,
       },

@@ -1,10 +1,11 @@
-import { classify, LOCATION_POLICY } from '@attendance/shared';
+import { classify, LOCATION_POLICY, zonesOf } from '@attendance/shared';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import * as Location from 'expo-location';
 import React, { useCallback, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import type MapView from 'react-native-maps';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { locationColors, palette } from '../../app/theme';
@@ -14,7 +15,7 @@ import { type LastFix, useAppStore } from '../../store/appStore';
 import { GOOGLE_MAPS_CONFIGURED } from '../../utils/env';
 import { GeofenceMap } from './GeofenceMap';
 import { LocationPill } from './LocationCard';
-import { bangkokClock, LOCATION_TITLE, regionFor } from './locationModel';
+import { bangkokClock, locationTitle, regionFor, zoneForFix } from './locationModel';
 import { useDisplayFix } from './useDisplayFix';
 
 const SHEET_HEIGHT = 330;
@@ -51,6 +52,7 @@ function Legend({ color, text }: { color: string; text: string }) {
  * sheet is shown on its own with the coordinates as text.
  */
 export function LocationMapScreen() {
+  const { t } = useTranslation('location');
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const cfg = useAppStore((s) => s.dashboard?.config ?? null);
@@ -71,6 +73,7 @@ export function LocationMapScreen() {
         classification: c.classification,
         distanceM: c.distanceM,
         uncertainReason: c.uncertainReason,
+        zone: c.zone,
       };
       useAppStore.getState().setLastFix(next);
     },
@@ -84,7 +87,7 @@ export function LocationMapScreen() {
       (async () => {
         const perm = await Location.getForegroundPermissionsAsync();
         if (!perm.granted) {
-          setLocError('Location permission is not granted.');
+          setLocError(t('map.permissionMissing'));
           return;
         }
         // Last known position only positions the camera; it is never used as evidence (design §16.3).
@@ -102,18 +105,19 @@ export function LocationMapScreen() {
         cancelled = true;
         sub?.remove();
       };
-    }, [update, setLocError]),
+    }, [update, setLocError, t]),
   );
 
   function recenter() {
     if (!cfg) return;
-    if (fix) mapRef.current?.animateToRegion({ ...regionFor(cfg), latitude: fix.lat, longitude: fix.lng }, 400);
-    else mapRef.current?.animateToRegion(regionFor(cfg), 400);
+    const area = regionFor(zoneForFix(cfg, fix));
+    if (fix) mapRef.current?.animateToRegion({ ...area, latitude: fix.lat, longitude: fix.lng }, 400);
+    else mapRef.current?.animateToRegion(area, 400);
   }
 
   const back = (
     <View style={[styles.topLeft, { top: insets.top + 12 }]}>
-      <RoundButton icon="chevron-left" label="Back" onPress={() => navigation.goBack()} />
+      <RoundButton icon="chevron-left" label={t('map.back')} onPress={() => navigation.goBack()} />
     </View>
   );
 
@@ -121,13 +125,15 @@ export function LocationMapScreen() {
     return (
       <View style={[styles.screen, styles.pad, { paddingTop: insets.top + 84 }]}>
         {back}
-        <Text>The attendance area has not been loaded yet. Connect to the internet and pull to refresh on the dashboard.</Text>
+        <Text>{t('map.notLoaded')}</Text>
       </View>
     );
   }
 
   const showMap = GOOGLE_MAPS_CONFIGURED && !mapFailed;
   const cls = fix?.classification ?? null;
+  const zones = zonesOf(cfg);
+  const zone = zoneForFix(cfg, fix);
 
   return (
     <View style={styles.screen}>
@@ -139,40 +145,48 @@ export function LocationMapScreen() {
         <View style={[styles.noMap, { paddingTop: insets.top + 84, paddingBottom: SHEET_HEIGHT }]}>
           <MaterialCommunityIcons name="map-marker-radius-outline" size={56} color={palette.textMuted} />
           <Text style={styles.noMapText}>
-            Map unavailable{GOOGLE_MAPS_CONFIGURED ? '' : ' (no Google Maps key in this build)'}.{'\n'}Area “{cfg.name}”: centre {cfg.centerLat.toFixed(5)},{' '}
-            {cfg.centerLng.toFixed(5)}, radius {cfg.radiusM} m, version {cfg.version}.
-            {fix ? `\nYou: ${fix.lat.toFixed(5)}, ${fix.lng.toFixed(5)}` : ''}
+            {GOOGLE_MAPS_CONFIGURED ? t('map.unavailable', { version: String(cfg.version) }) : t('map.unavailableNoKey', { version: String(cfg.version) })}
+            {zones
+              .map((z) => `\n${t('map.zoneLine', { name: z.name, lat: z.centerLat.toFixed(5), lng: z.centerLng.toFixed(5), radius: String(z.radiusM) })}`)
+              .join('')}
+            {fix ? `\n${t('map.you', { lat: fix.lat.toFixed(5), lng: fix.lng.toFixed(5) })}` : ''}
           </Text>
         </View>
       )}
 
       {back}
       <View style={[styles.topRight, { top: insets.top + 12 }]}>
-        {showMap ? <RoundButton icon="crosshairs" label="Re-center" onPress={recenter} /> : null}
-        <RoundButton icon="refresh" label="Refresh location" onPress={() => void loc.refresh()} busy={loc.busy} />
+        {showMap ? <RoundButton icon="crosshairs" label={t('map.recenter')} onPress={recenter} /> : null}
+        <RoundButton icon="refresh" label={t('map.refreshLocation')} onPress={() => void loc.refresh()} busy={loc.busy} />
       </View>
 
       <View style={[styles.sheet, { paddingBottom: insets.bottom + 20 }]}>
         <View style={styles.handle} />
         <View style={styles.rowBetween}>
-          <Text style={styles.sheetTitle}>{cls ? LOCATION_TITLE[cls] : 'Waiting for a location fix…'}</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.sheetTitle}>{cls ? locationTitle(cls) : t('map.waiting')}</Text>
+            {zones.length > 1 && fix ? (
+              <Text style={styles.areaName}>{cls === 'CONFIRMED_INSIDE' ? zone.name : t('map.nearest', { area: zone.name })}</Text>
+            ) : null}
+          </View>
           {cls ? <LocationPill cls={cls} /> : null}
         </View>
         <View style={styles.stats}>
-          <Stat label="Distance" value={fix?.distanceM != null ? `${Math.round(fix.distanceM)} m` : '—'} />
-          <Stat label="Accuracy" value={fix?.accuracyM != null ? `±${Math.round(fix.accuracyM)} m` : '—'} />
-          <Stat label="Radius" value={`${cfg.radiusM} m`} />
+          <Stat label={t('map.distance')} value={fix?.distanceM != null ? t('map.metres', { value: String(Math.round(fix.distanceM)) }) : '—'} />
+          <Stat label={t('map.accuracy')} value={fix?.accuracyM != null ? t('map.plusMinusMetres', { value: String(Math.round(fix.accuracyM)) }) : '—'} />
+          <Stat label={t('map.radius')} value={t('map.metres', { value: String(zone.radiusM) })} />
         </View>
         {cls === 'UNCERTAIN' ? <Text style={styles.reason}>{uncertainReasonText(fix?.uncertainReason)}</Text> : null}
-        {fix?.isMock ? <Text style={styles.error}>Mock location detected. Readings like this are rejected by the server.</Text> : null}
+        {fix?.isMock ? <Text style={styles.error}>{t('map.mock')}</Text> : null}
         {loc.error ? <Text style={styles.error}>{loc.error}</Text> : null}
         <View style={{ gap: 8 }}>
-          <Legend color={locationColors.CONFIRMED_INSIDE} text="Green: accuracy circle fully inside" />
-          <Legend color={locationColors.UNCERTAIN} text="Orange: accuracy circle crosses the boundary" />
-          <Legend color={locationColors.CONFIRMED_OUTSIDE} text="Grey: fully outside" />
+          <Legend color={locationColors.CONFIRMED_INSIDE} text={t('map.legendInside')} />
+          <Legend color={locationColors.UNCERTAIN} text={t('map.legendUncertain')} />
+          <Legend color={locationColors.CONFIRMED_OUTSIDE} text={t('map.legendOutside')} />
         </View>
         <Text style={styles.footer}>
-          {fix ? `Updated ${bangkokClock(fix.measuredAt)} · ` : ''}Shown on this phone only, never uploaded.
+          {fix ? t('map.updatedAt', { time: bangkokClock(fix.measuredAt) }) : ''}
+          {t('map.privacy')}
         </Text>
       </View>
     </View>
@@ -224,15 +238,16 @@ const styles = StyleSheet.create({
   },
   handle: { alignSelf: 'center', width: 40, height: 5, borderRadius: 3, backgroundColor: '#CBD5E1' },
   rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  sheetTitle: { flex: 1, fontSize: 24, fontWeight: '800', color: palette.text },
+  sheetTitle: { fontSize: 24, fontWeight: '800', color: palette.text },
+  areaName: { fontSize: 15, fontWeight: '600', color: palette.textSoft, marginTop: 2 },
   stats: { flexDirection: 'row', gap: 8 },
   stat: { flex: 1, backgroundColor: palette.background, borderRadius: 14, padding: 12, gap: 2 },
   statLabel: { fontSize: 13, color: palette.textMuted },
-  statValue: { fontSize: 20, fontFamily: 'monospace', color: palette.text },
+  statValue: { fontSize: 18, fontFamily: 'monospace', color: palette.text },
   reason: { fontSize: 14, color: palette.amberText },
   error: { fontSize: 13, color: '#DC2626' },
   legendRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   legendDot: { width: 14, height: 14, borderRadius: 7 },
-  legendText: { fontSize: 15, color: palette.textSoft },
+  legendText: { flex: 1, fontSize: 15, color: palette.textSoft },
   footer: { fontSize: 13, color: palette.textMuted },
 });

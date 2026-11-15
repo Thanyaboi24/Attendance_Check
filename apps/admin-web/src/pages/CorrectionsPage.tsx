@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
 import {
   CorrectionStatus,
@@ -11,12 +12,15 @@ import {
   type ReviewCorrection,
 } from '@attendance/shared';
 import { api } from '../api/client';
+import { t } from '../i18n';
 import { Badge, Dialog, Empty, ErrorBox, FieldError, Loading, PageHeader, Pagination } from '../components/ui';
-import { bangkokInputsToIso, fmtDateTime, humanize, isoToBangkokInputs } from '../lib/format';
+import { bangkokInputsToIso, enumLabel, fmtDateTime, isoToBangkokInputs } from '../lib/format';
+import { msg } from '../lib/validation';
 
 const PAGE_SIZE = 25;
 
 export function CorrectionsPage() {
+  const { t } = useTranslation(['corrections', 'common']);
   const [status, setStatus] = useState<string>(CorrectionStatus.PENDING);
   const [page, setPage] = useState(1);
   const [reviewing, setReviewing] = useState<CorrectionDto | null>(null);
@@ -29,10 +33,10 @@ export function CorrectionsPage() {
 
   return (
     <>
-      <PageHeader title="Correction requests" subtitle="Staff requests to fix missing or incorrect attendance records." />
+      <PageHeader title={t('title')} subtitle={t('subtitle')} />
       <div className="filters">
         <label className="field">
-          <span>Status</span>
+          <span>{t('common:filters.status')}</span>
           <select
             value={status}
             onChange={(e) => {
@@ -40,10 +44,10 @@ export function CorrectionsPage() {
               setPage(1);
             }}
           >
-            <option value="">All</option>
+            <option value="">{t('common:filters.all')}</option>
             {Object.values(CorrectionStatus).map((s) => (
               <option key={s} value={s}>
-                {humanize(s)}
+                {enumLabel('correctionStatus', s)}
               </option>
             ))}
           </select>
@@ -53,20 +57,20 @@ export function CorrectionsPage() {
       {list.isPending ? <Loading /> : null}
       {list.data ? (
         list.data.items.length === 0 ? (
-          <Empty>{status === CorrectionStatus.PENDING ? 'No pending corrections.' : 'No corrections found.'}</Empty>
+          <Empty>{status === CorrectionStatus.PENDING ? t('emptyPending') : t('empty')}</Empty>
         ) : (
           <>
             <div className="table-wrap">
               <table>
                 <thead>
                   <tr>
-                    <th>Submitted</th>
-                    <th>Staff</th>
-                    <th>Work date</th>
-                    <th>Requested check in</th>
-                    <th>Requested check out</th>
-                    <th>Reason</th>
-                    <th>Status</th>
+                    <th>{t('col.submitted')}</th>
+                    <th>{t('col.staff')}</th>
+                    <th>{t('col.workDate')}</th>
+                    <th>{t('col.requestedIn')}</th>
+                    <th>{t('col.requestedOut')}</th>
+                    <th>{t('col.reason')}</th>
+                    <th>{t('col.status')}</th>
                     <th />
                   </tr>
                 </thead>
@@ -83,18 +87,18 @@ export function CorrectionsPage() {
                       <td>{fmtDateTime(c.requestedCheckOutAt)}</td>
                       <td className="wrap">{c.reason}</td>
                       <td>
-                        <Badge value={c.status} />
+                        <Badge value={c.status} kind="correctionStatus" />
                         {c.reviewNote ? <div className="muted small">“{c.reviewNote}”</div> : null}
                         {c.reviewer ? (
                           <div className="muted small">
-                            by {c.reviewer.fullName}, {fmtDateTime(c.reviewedAt)}
+                            {t('reviewedBy', { name: c.reviewer.fullName, time: fmtDateTime(c.reviewedAt) })}
                           </div>
                         ) : null}
                       </td>
                       <td className="right">
                         {c.status === CorrectionStatus.PENDING ? (
                           <button type="button" className="btn btn-small btn-primary" onClick={() => setReviewing(c)}>
-                            Review
+                            {t('common:actions.review')}
                           </button>
                         ) : null}
                       </td>
@@ -118,12 +122,17 @@ const ReviewForm = z.object({
   inTime: z.string(),
   outDate: z.string(),
   outTime: z.string(),
-  note: z.string().trim().min(3, 'A note is required (at least 3 characters)').max(1000),
+  note: z
+    .string()
+    .trim()
+    .min(3, msg(() => t('corrections:validation.noteRequired')))
+    .max(1000),
 });
 type ReviewForm = z.infer<typeof ReviewForm>;
 
 /** Approve (optionally adjusting the times, entered in Bangkok time) or reject; a note is always required. */
 export function CorrectionReviewDialog({ correction, onClose }: { correction: CorrectionDto; onClose: () => void }) {
+  const { t } = useTranslation(['corrections', 'common']);
   const qc = useQueryClient();
   const reqIn = isoToBangkokInputs(correction.requestedCheckInAt);
   const reqOut = isoToBangkokInputs(correction.requestedCheckOutAt);
@@ -159,11 +168,11 @@ export function CorrectionReviewDialog({ correction, onClose }: { correction: Co
   const onSubmit = handleSubmit((v) => {
     const body: ReviewCorrection = { decision: v.decision, note: v.note.trim() };
     if (v.decision === 'APPROVE') {
-      if (!!v.inDate !== !!v.inTime && v.inTime) return setError('inTime', { message: 'Enter both date and time' });
-      if (!!v.outDate !== !!v.outTime && v.outTime) return setError('outTime', { message: 'Enter both date and time' });
+      if (!!v.inDate !== !!v.inTime && v.inTime) return setError('inTime', { message: t('validation.enterBoth') });
+      if (!!v.outDate !== !!v.outTime && v.outTime) return setError('outTime', { message: t('validation.enterBoth') });
       const checkInAt = bangkokInputsToIso(v.inDate, v.inTime);
       const checkOutAt = bangkokInputsToIso(v.outDate, v.outTime);
-      if (!checkInAt && !checkOutAt) return setError('inTime', { message: 'Provide a check-in time, a check-out time, or both' });
+      if (!checkInAt && !checkOutAt) return setError('inTime', { message: t('validation.needTime') });
       body.checkInAt = checkInAt;
       body.checkOutAt = checkOutAt;
     }
@@ -171,19 +180,26 @@ export function CorrectionReviewDialog({ correction, onClose }: { correction: Co
     if (!parsed.success) {
       const issue = parsed.error.issues[0];
       const field = issue?.path[0] === 'checkOutAt' ? 'outTime' : issue?.path[0] === 'note' ? 'note' : 'root';
-      return setError(field, { message: issue?.message ?? 'Invalid input' });
+      // The shared schema's messages are English; show ours for each field it can reject.
+      const message =
+        field === 'outTime'
+          ? t('validation.outBeforeIn')
+          : field === 'note'
+            ? t('validation.noteRequired')
+            : t('common:validation.invalidInput');
+      return setError(field, { message });
     }
     review.mutate(parsed.data);
   });
 
   return (
     <Dialog
-      title="Review correction"
+      title={t('review.title')}
       onClose={onClose}
       footer={
         <>
           <button type="button" className="btn btn-ghost" onClick={onClose}>
-            Cancel
+            {t('common:actions.cancel')}
           </button>
           <button
             type="submit"
@@ -191,52 +207,55 @@ export function CorrectionReviewDialog({ correction, onClose }: { correction: Co
             className={`btn ${decision === 'REJECT' ? 'btn-danger' : 'btn-primary'}`}
             disabled={review.isPending}
           >
-            {decision === 'REJECT' ? 'Reject' : 'Approve'}
+            {decision === 'REJECT' ? t('review.reject') : t('review.approve')}
           </button>
         </>
       }
     >
       <form id="correction-review" onSubmit={onSubmit} noValidate>
         <dl className="kv">
-          <dt>Staff</dt>
+          <dt>{t('review.staff')}</dt>
           <dd>{correction.user.fullName}</dd>
-          <dt>Work date</dt>
+          <dt>{t('review.workDate')}</dt>
           <dd>{correction.workDate}</dd>
-          <dt>Requested</dt>
+          <dt>{t('review.requested')}</dt>
           <dd>
-            in {fmtDateTime(correction.requestedCheckInAt)} · out {fmtDateTime(correction.requestedCheckOutAt)}
+            {t('review.requestedValue', {
+              in: fmtDateTime(correction.requestedCheckInAt),
+              out: fmtDateTime(correction.requestedCheckOutAt),
+            })}
           </dd>
-          <dt>Reason</dt>
+          <dt>{t('review.reason')}</dt>
           <dd className="wrap">{correction.reason}</dd>
         </dl>
-        <div className="radio-row" role="radiogroup" aria-label="Decision">
+        <div className="radio-row" role="radiogroup" aria-label={t('review.decision')}>
           <label>
-            <input type="radio" value="APPROVE" {...register('decision')} /> Approve
+            <input type="radio" value="APPROVE" {...register('decision')} /> {t('review.approve')}
           </label>
           <label>
-            <input type="radio" value="REJECT" {...register('decision')} /> Reject
+            <input type="radio" value="REJECT" {...register('decision')} /> {t('review.reject')}
           </label>
         </div>
         {decision === 'APPROVE' ? (
           <>
-            <p className="muted small">Adjust the times if needed (Bangkok time). Approval updates or creates the session.</p>
+            <p className="muted small">{t('review.adjustHint')}</p>
             <fieldset className="grid-2">
-              <legend>Check in</legend>
-              <input type="date" aria-label="Check-in date" {...register('inDate')} />
-              <input type="time" aria-label="Check-in time" {...register('inTime')} />
+              <legend>{t('review.checkIn')}</legend>
+              <input type="date" aria-label={t('review.checkInDate')} {...register('inDate')} />
+              <input type="time" aria-label={t('review.checkInTime')} {...register('inTime')} />
               <FieldError message={errors.inTime?.message} />
             </fieldset>
             <fieldset className="grid-2">
-              <legend>Check out</legend>
-              <input type="date" aria-label="Check-out date" {...register('outDate')} />
-              <input type="time" aria-label="Check-out time" {...register('outTime')} />
+              <legend>{t('review.checkOut')}</legend>
+              <input type="date" aria-label={t('review.checkOutDate')} {...register('outDate')} />
+              <input type="time" aria-label={t('review.checkOutTime')} {...register('outTime')} />
               <FieldError message={errors.outTime?.message} />
             </fieldset>
           </>
         ) : null}
         <label className="field">
-          <span>Note to staff (required)</span>
-          <textarea rows={3} aria-label="Review note" {...register('note')} />
+          <span>{t('review.noteLabel')}</span>
+          <textarea rows={3} aria-label={t('review.noteAria')} {...register('note')} />
           <FieldError message={errors.note?.message} />
         </label>
         <FieldError message={errors.root?.message} />

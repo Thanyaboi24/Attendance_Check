@@ -1,4 +1,5 @@
 import { AccountStatus, RequestStatus, Role, type SessionDto, type UserProfile } from '@attendance/shared';
+import { t } from '../../i18n';
 import { errorMessage, isApiError, isAuthError, isNetworkError } from '../errors';
 import type { AppDeps } from '../ports';
 import { getActiveConfig, logEvent, META_USER_ID, refreshState, safe } from './common';
@@ -15,8 +16,10 @@ export type LoginOutcome =
   | { kind: 'NETWORK' }
   | { kind: 'ERROR'; message: string };
 
-export const ADMIN_WEB_MESSAGE =
-  'This app is for staff attendance only. Please use the Admin Web to manage attendance, users or geofence settings.';
+/** Shown to non-STAFF accounts (current language). */
+export function adminWebMessage(): string {
+  return t('auth:adminWeb');
+}
 
 export async function login(deps: AppDeps, email: string, password: string): Promise<LoginOutcome> {
   let res;

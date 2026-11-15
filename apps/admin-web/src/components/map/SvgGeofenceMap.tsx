@@ -1,6 +1,7 @@
 import type { MouseEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { distanceM } from '@attendance/shared';
-import { fmtMetres, humanize } from '../../lib/format';
+import { enumLabel, fmtMetres } from '../../lib/format';
 import { CLASS_COLOR, GEOFENCE_COLOR, fromOffsetM, offsetM, roundCoord, type GeofenceMapProps } from './types';
 
 const SIZE = 400;
@@ -16,7 +17,9 @@ function niceScale(extent: number): number {
  * Key-less fallback: plots the geofence and evidence in metres around the centre (north up).
  * Clicking moves the centre when `onCenterChange` is set.
  */
-export function SvgGeofenceMap({ center, radiusM, evidence = [], onCenterChange, height = 360 }: GeofenceMapProps) {
+export function SvgGeofenceMap({ center, radiusM, otherAreas = [], evidence = [], onCenterChange, height = 360 }: GeofenceMapProps) {
+  const { t } = useTranslation(['geofence', 'common']);
+  const others = otherAreas.map((a) => ({ a, ...offsetM(center, a.center) }));
   const pts = evidence.map((e) => ({ e, ...offsetM(center, e), d: distanceM({ centerLat: center.lat, centerLng: center.lng }, e) }));
   const extent =
     Math.max(radiusM * 1.3, ...pts.map((p) => Math.max(Math.abs(p.x), Math.abs(p.y)) + (p.e.accuracyM ?? 0))) * 1.1 || 100;
@@ -39,7 +42,7 @@ export function SvgGeofenceMap({ center, radiusM, evidence = [], onCenterChange,
         viewBox={`${-SIZE / 2} ${-SIZE / 2} ${SIZE} ${SIZE}`}
         preserveAspectRatio="xMidYMid meet"
         role="img"
-        aria-label={`Geofence plot: radius ${Math.round(radiusM)} m, ${evidence.length} evidence point(s)`}
+        aria-label={t('map.plotLabel', { radius: fmtMetres(radiusM), count: evidence.length })}
         onClick={handleClick}
         style={{ cursor: onCenterChange ? 'crosshair' : 'default', width: '100%', height: '100%' }}
       >
@@ -50,11 +53,33 @@ export function SvgGeofenceMap({ center, radiusM, evidence = [], onCenterChange,
         </defs>
         <rect x={-SIZE / 2} y={-SIZE / 2} width={SIZE} height={SIZE} fill="url(#grid)" />
         <circle r={radiusM * k} fill={GEOFENCE_COLOR} fillOpacity={0.1} stroke={GEOFENCE_COLOR} strokeWidth={2} />
+        {others.map(({ a, x, y }) => (
+          <circle
+            key={a.name}
+            cx={x * k}
+            cy={-y * k}
+            r={a.radiusM * k}
+            fill={GEOFENCE_COLOR}
+            fillOpacity={0.05}
+            stroke={GEOFENCE_COLOR}
+            strokeOpacity={0.6}
+            strokeWidth={2}
+          >
+            <title>{a.name}</title>
+          </circle>
+        ))}
         <line x1={-6} x2={6} y1={0} y2={0} stroke={GEOFENCE_COLOR} strokeWidth={2} />
         <line x1={0} x2={0} y1={-6} y2={6} stroke={GEOFENCE_COLOR} strokeWidth={2} />
         {pts.map(({ e, x, y, d }) => (
           <g key={e.id} transform={`translate(${x * k} ${-y * k})`}>
-            <title>{`${e.label}: ${humanize(e.classification)}, ${fmtMetres(d)} from centre, accuracy ${fmtMetres(e.accuracyM)}`}</title>
+            <title>
+              {t('map.evidenceTitleDistance', {
+                label: e.label,
+                class: enumLabel('locationClass', e.classification),
+                distance: fmtMetres(d),
+                accuracy: fmtMetres(e.accuracyM),
+              })}
+            </title>
             {e.accuracyM ? (
               <circle
                 r={Math.max(e.accuracyM * k, 2)}
@@ -68,7 +93,7 @@ export function SvgGeofenceMap({ center, radiusM, evidence = [], onCenterChange,
           </g>
         ))}
         <text x={-SIZE / 2 + 10} y={-SIZE / 2 + 20} fontSize={13} fill="#475569">
-          N ↑
+          {t('map.north')}
         </text>
         <g transform={`translate(${-SIZE / 2 + 12} ${SIZE / 2 - 14})`}>
           <line x1={0} x2={scale * k} y1={0} y2={0} stroke="#334155" strokeWidth={2} />
@@ -77,9 +102,7 @@ export function SvgGeofenceMap({ center, radiusM, evidence = [], onCenterChange,
           </text>
         </g>
       </svg>
-      <div className="map-note">
-        Schematic view (no Google Maps key configured){onCenterChange ? ' — click to move the centre.' : '.'}
-      </div>
+      <div className="map-note">{onCenterChange ? t('map.schematicEditable') : t('map.schematic')}</div>
     </div>
   );
 }

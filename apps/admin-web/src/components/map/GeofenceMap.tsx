@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react';
+import { useTranslation } from 'react-i18next';
 import { LocationClass } from '@attendance/shared';
-import { humanize } from '../../lib/format';
+import { enumLabel } from '../../lib/format';
 import { Loading } from '../ui';
 import { SvgGeofenceMap } from './SvgGeofenceMap';
 import { CLASS_COLOR, GEOFENCE_COLOR, type GeofenceMapProps } from './types';
@@ -14,11 +15,12 @@ export function mapsApiKey(): string | undefined {
 }
 
 export function GeofenceMap(props: GeofenceMapProps) {
+  const { t } = useTranslation(['geofence', 'common']);
   const key = mapsApiKey();
   return (
     <div className="map">
       {key ? (
-        <Suspense fallback={<Loading label="Loading map…" />}>
+        <Suspense fallback={<Loading label={t('map.loading')} />}>
           <GoogleGeofenceMap apiKey={key} {...props} />
         </Suspense>
       ) : (
@@ -30,19 +32,20 @@ export function GeofenceMap(props: GeofenceMapProps) {
 }
 
 function MapLegend({ withEvidence }: { withEvidence: boolean }) {
+  const { t } = useTranslation(['geofence', 'common']);
   return (
-    <ul className="legend" aria-label="Map legend">
+    <ul className="legend" aria-label={t('map.legend')}>
       <li>
-        <span className="swatch" style={{ borderColor: GEOFENCE_COLOR, background: `${GEOFENCE_COLOR}22` }} /> Geofence
+        <span className="swatch" style={{ borderColor: GEOFENCE_COLOR, background: `${GEOFENCE_COLOR}22` }} /> {t('map.geofence')}
       </li>
       {withEvidence
         ? Object.values(LocationClass).map((c) => (
             <li key={c}>
-              <span className="dot" style={{ background: CLASS_COLOR[c] }} /> {humanize(c)}
+              <span className="dot" style={{ background: CLASS_COLOR[c] }} /> {enumLabel('locationClass', c)}
             </li>
           ))
         : null}
-      {withEvidence ? <li className="muted">Shaded ring = reported accuracy</li> : null}
+      {withEvidence ? <li className="muted">{t('map.accuracyRing')}</li> : null}
     </ul>
   );
 }

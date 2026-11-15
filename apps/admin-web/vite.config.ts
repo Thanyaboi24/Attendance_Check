@@ -28,6 +28,7 @@ export default defineConfig({
     globals: false,
     setupFiles: ['./src/test/setup.ts'],
     css: false,
-    env: { TZ: 'UTC' },
+    // Tests always use the key-less schematic map, even when a developer's .env.local has a Maps key.
+    env: { TZ: 'UTC', VITE_GOOGLE_MAPS_API_KEY: '' },
   },
 });

@@ -29,6 +29,8 @@ export interface LastFix {
   distanceM: number | null;
   uncertainReason: string | null;
   isMock: boolean;
+  /** Area (campus) the fix was matched to, when the configuration has several. */
+  zone?: string;
 }
 
 export interface NotificationIntent {

@@ -1,9 +1,10 @@
-import type { GeofenceConfig, LocationClass } from '@attendance/shared';
+import { type GeofenceConfig, type LocationClass, zonesOf } from '@attendance/shared';
 import React, { forwardRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, View } from 'react-native';
 import MapView, { Circle, Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { locationColors, palette } from '../../app/theme';
-import { regionFor } from './locationModel';
+import { regionFor, zoneForFix } from './locationModel';
 
 export interface MapReading {
   lat: number;
@@ -28,26 +29,40 @@ function Dot({ color, size }: { color: string; size: number }) {
  */
 export const GeofenceMap = forwardRef<
   MapView,
-  { cfg: GeofenceConfig; reading: MapReading | null; cls: LocationClass | null; topInset?: number; bottomInset?: number }
+  {
+    cfg: GeofenceConfig;
+    reading: (MapReading & { zone?: string }) | null;
+    cls: LocationClass | null;
+    topInset?: number;
+    bottomInset?: number;
+  }
 >(function GeofenceMap({ cfg, reading, cls, topInset = 0, bottomInset = 0 }, ref) {
-  const center = { latitude: cfg.centerLat, longitude: cfg.centerLng };
+  const { t } = useTranslation('location');
+  const zones = zonesOf(cfg);
   const color = locationColors[cls ?? 'UNCERTAIN'];
   return (
     <MapView
       ref={ref}
       provider={PROVIDER_GOOGLE}
       style={StyleSheet.absoluteFill}
-      initialRegion={regionFor(cfg)}
+      initialRegion={regionFor(zoneForFix(cfg, reading))}
       mapPadding={{ top: topInset, bottom: bottomInset, left: 0, right: 0 }}
       showsUserLocation={false}
       showsMyLocationButton={false}
       showsCompass={false}
       toolbarEnabled={false}
     >
-      <Circle center={center} radius={cfg.radiusM} strokeColor={palette.blue} strokeWidth={3} fillColor="rgba(37,99,235,0.14)" />
-      <Marker coordinate={center} anchor={{ x: 0.5, y: 0.5 }} title={cfg.name} description={`Radius ${cfg.radiusM} m · v${cfg.version}`} tracksViewChanges={false}>
-        <Dot color={palette.blue} size={22} />
-      </Marker>
+      {zones.map((z) => {
+        const center = { latitude: z.centerLat, longitude: z.centerLng };
+        return (
+          <React.Fragment key={z.name}>
+            <Circle center={center} radius={z.radiusM} strokeColor={palette.blue} strokeWidth={3} fillColor="rgba(37,99,235,0.14)" />
+            <Marker coordinate={center} anchor={{ x: 0.5, y: 0.5 }} title={z.name} description={t('map.markerDescription', { radius: String(z.radiusM), version: String(cfg.version) })} tracksViewChanges={false}>
+              <Dot color={palette.blue} size={22} />
+            </Marker>
+          </React.Fragment>
+        );
+      })}
       {reading ? (
         <>
           {reading.accuracyM ? (
@@ -60,7 +75,7 @@ export const GeofenceMap = forwardRef<
             />
           ) : null}
           {/* Re-keyed on colour so the bitmap is redrawn when the classification changes. */}
-          <Marker key={color} coordinate={{ latitude: reading.lat, longitude: reading.lng }} anchor={{ x: 0.5, y: 0.5 }} title="You" tracksViewChanges={false}>
+          <Marker key={color} coordinate={{ latitude: reading.lat, longitude: reading.lng }} anchor={{ x: 0.5, y: 0.5 }} title={t('map.markerYou')} tracksViewChanges={false}>
             <Dot color={color} size={24} />
           </Marker>
         </>

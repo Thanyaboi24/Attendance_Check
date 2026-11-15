@@ -8,6 +8,14 @@ export const DEFAULT_GEOFENCE = {
 
 export const RADIUS_MIN_M = 1;
 export const RADIUS_MAX_M = 1000;
+/** Android allows 100 geofences per app; a handful of campuses is plenty. */
+export const MAX_GEOFENCE_ZONES = 10;
+
+/** Campus areas seeded in development (centres from OpenStreetMap). */
+export const SIIT_CAMPUSES = [
+  { name: 'SIIT Rangsit campus', centerLat: 14.0693, centerLng: 100.6035 },
+  { name: 'SIIT Bangkadi campus', centerLat: 13.980481, centerLng: 100.55487 },
+] as const;
 
 /** Display time zone; everything is stored and transported as UTC ISO-8601. */
 export const DISPLAY_TIME_ZONE = 'Asia/Bangkok';

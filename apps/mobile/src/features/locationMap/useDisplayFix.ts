@@ -2,6 +2,7 @@ import { classify, type GeofenceConfig } from '@attendance/shared';
 import { useCallback, useState } from 'react';
 import { getDeps } from '../../app/container';
 import { isLocationError } from '../../domain/errors';
+import { t } from '../../i18n';
 import { useAppStore } from '../../store/appStore';
 
 /** Takes a fresh fix for display (location card / map). It is not stored as evidence and never uploaded. */
@@ -23,10 +24,11 @@ export function useDisplayFix(cfg: GeofenceConfig | null) {
           classification: c.classification,
           distanceM: c.distanceM,
           uncertainReason: c.uncertainReason,
+          zone: c.zone,
         });
       }
     } catch (e) {
-      setError(isLocationError(e) ? e.message : 'Location unavailable');
+      setError(isLocationError(e) ? e.message : t('location:unavailable'));
     } finally {
       setBusy(false);
     }

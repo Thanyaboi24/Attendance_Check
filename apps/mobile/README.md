@@ -97,8 +97,7 @@ Mock locations are reported as `isMock = true` and the backend rejects them (`RE
 
 ## Not implemented / not verifiable here
 
-- **Kotlin module is uncompiled.** This machine has no Android SDK, so `modules/attendance-scheduler/android` (WorkManager worker, `HeadlessJsTaskService`, `BootReceiver`) has never been built or run. JS falls back to a no-op + warning when the native module is missing.
-- No APK was built; `npx expo prebuild` / Gradle were not run. `npx expo config` (plugins resolve, manifest entries present) and `npx expo export --platform android` (Metro → Hermes bundle) succeed.
+- The Kotlin module and the app have been built and run on an Android emulator (API 36). Real-device background behaviour still needs field testing.
 - Background behaviour (Doze, OEM killers, Headless JS start time, Android 12+ foreground-service start restrictions from WorkManager) is only verifiable on devices (DS2 #15). If Android refuses the foreground-service start, the worker retries up to 5 times; disabling battery optimisation exempts the app.
 - The `Dismiss` button is handled when the app process is alive; if the app was killed, the dismiss event is not logged (it never cancels anything, so behaviour is still correct).
 - Manual check-in without a geofence event (e.g. a missed ENTER) is not offered; the user files a correction request.

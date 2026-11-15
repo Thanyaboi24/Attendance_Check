@@ -1,12 +1,22 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { ErrorCode, Role, type LoginResponse, type UserProfile } from '@attendance/shared';
-import { api, ApiRequestError, NETWORK_ERROR, type ApiClient } from '../api/client';
+import { api, ApiRequestError, errorMessage, NETWORK_ERROR, type ApiClient } from '../api/client';
+import { t } from '../i18n';
+import { en } from '../i18n/en';
 
-export const STAFF_NOT_ALLOWED =
-  'This dashboard is for administrators; please use the mobile app.';
+/** English text of the "staff cannot use the admin web" message (tests); the UI shows `auth:errors.staffNotAllowed`. */
+export const STAFF_NOT_ALLOWED: string = en.auth.errors.staffNotAllowed;
 
-export class LoginError extends Error {}
+/** A sign-in refused by the admin web itself (not by the API). */
+export class LoginError extends Error {
+  constructor(readonly reason: 'STAFF_NOT_ALLOWED') {
+    super(reason);
+  }
+}
+
+/** Why the login page shows a notice (translated there, so it follows the language switch). */
+export type AuthNotice = 'sessionExpired';
 
 export type AuthStatus = 'loading' | 'authenticated' | 'anonymous';
 
@@ -14,7 +24,7 @@ interface AuthContextValue {
   status: AuthStatus;
   user: UserProfile | null;
   /** Set when the session ended on its own (refresh failed), shown on the login page. */
-  notice: string | null;
+  notice: AuthNotice | null;
   login(email: string, password: string): Promise<UserProfile>;
   logout(): Promise<void>;
 }
@@ -22,23 +32,21 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function loginErrorMessage(e: unknown): string {
-  if (e instanceof LoginError) return e.message;
+  if (e instanceof LoginError) return t('auth:errors.staffNotAllowed');
   if (e instanceof ApiRequestError) {
-    if (e.status === 423 || e.code === ErrorCode.ACCOUNT_LOCKED)
-      return 'This account is temporarily locked after too many failed sign-in attempts. Please try again in 15 minutes or reset your password.';
-    if (e.code === ErrorCode.ACCOUNT_INACTIVE)
-      return 'This account is not active. Activate it from the link in your email or contact a system administrator.';
-    if (e.status === 401 || e.status === 400) return 'Invalid email or password.';
-    if (e.code === NETWORK_ERROR) return e.message;
+    if (e.status === 423 || e.code === ErrorCode.ACCOUNT_LOCKED) return t('auth:errors.locked');
+    if (e.code === ErrorCode.ACCOUNT_INACTIVE) return t('auth:errors.inactive');
+    if (e.status === 401 || e.status === 400) return t('auth:errors.invalidCredentials');
+    if (e.code === NETWORK_ERROR) return errorMessage(e);
   }
-  return 'Sign-in failed. Please try again.';
+  return t('auth:errors.failed');
 }
 
 export function AuthProvider({ children, client = api }: { children: ReactNode; client?: ApiClient }) {
   const queryClient = useQueryClient();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [status, setStatus] = useState<AuthStatus>(() => (client.getRefreshToken() ? 'loading' : 'anonymous'));
-  const [notice, setNotice] = useState<string | null>(null);
+  const [notice, setNotice] = useState<AuthNotice | null>(null);
 
   // Restore the session after a reload: the refresh token survives in sessionStorage.
   useEffect(() => {
@@ -71,7 +79,7 @@ export function AuthProvider({ children, client = api }: { children: ReactNode; 
       client.onAuthLost(() => {
         setUser(null);
         setStatus('anonymous');
-        setNotice('Your session has expired. Please sign in again.');
+        setNotice('sessionExpired');
         queryClient.clear();
       }),
     [client, queryClient],
@@ -85,7 +93,7 @@ export function AuthProvider({ children, client = api }: { children: ReactNode; 
         client
           .post('/auth/logout', { refreshToken: res.tokens.refreshToken }, { auth: false })
           .catch(() => undefined);
-        throw new LoginError(STAFF_NOT_ALLOWED);
+        throw new LoginError('STAFF_NOT_ALLOWED');
       }
       client.setTokens(res.tokens);
       queryClient.clear();

@@ -1,4 +1,5 @@
-import type { GeofenceConfig, LocationClass, Method, NotificationStatus, RequestStatus, RequestType, SyncStatus, UncertainReason } from '@attendance/shared';
+import { type GeofenceConfig, GeofenceZoneSchema, type GeofenceZone, zonesOf } from '@attendance/shared';
+import type { LocationClass, Method, NotificationStatus, RequestStatus, RequestType, SyncStatus, UncertainReason } from '@attendance/shared';
 import type { SQLiteBindValue, SQLiteDatabase } from 'expo-sqlite';
 import type {
   EventLogEntry,
@@ -26,6 +27,7 @@ interface ConfigRow {
   max_location_age_sec: number;
   max_accuracy_m: number;
   effective_at: string;
+  zones_json: string | null;
 }
 
 interface RequestRow {
@@ -132,12 +134,23 @@ const toRequest = (r: RequestRow): LocalRequest => ({
   updatedAt: r.updated_at,
 });
 
+function parseZones(json: string | null): GeofenceZone[] | null {
+  if (!json) return null;
+  try {
+    const parsed = GeofenceZoneSchema.array().min(1).safeParse(JSON.parse(json));
+    return parsed.success ? parsed.data : null;
+  } catch {
+    return null;
+  }
+}
+
 const toConfig = (r: ConfigRow): GeofenceConfig => ({
   version: r.version,
   name: r.name,
   centerLat: r.center_lat,
   centerLng: r.center_lng,
   radiusM: r.radius_m,
+  zones: zonesOf({ name: r.name, centerLat: r.center_lat, centerLng: r.center_lng, radiusM: r.radius_m, zones: parseZones(r.zones_json) }),
   gracePeriodSec: r.grace_period_sec,
   maxLocationAgeSec: r.max_location_age_sec,
   maxAccuracyM: r.max_accuracy_m,
@@ -188,9 +201,21 @@ export class SqliteLocalStore implements LocalStore {
   async saveConfig(cfg: GeofenceConfig) {
     await this.db.runAsync(
       `INSERT OR REPLACE INTO config_cache
-        (version, name, center_lat, center_lng, radius_m, grace_period_sec, max_location_age_sec, max_accuracy_m, effective_at, fetched_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [cfg.version, cfg.name, cfg.centerLat, cfg.centerLng, cfg.radiusM, cfg.gracePeriodSec, cfg.maxLocationAgeSec, cfg.maxAccuracyM, cfg.effectiveAt, new Date().toISOString()],
+        (version, name, center_lat, center_lng, radius_m, zones_json, grace_period_sec, max_location_age_sec, max_accuracy_m, effective_at, fetched_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        cfg.version,
+        cfg.name,
+        cfg.centerLat,
+        cfg.centerLng,
+        cfg.radiusM,
+        JSON.stringify(zonesOf(cfg)),
+        cfg.gracePeriodSec,
+        cfg.maxLocationAgeSec,
+        cfg.maxAccuracyM,
+        cfg.effectiveAt,
+        new Date().toISOString(),
+      ],
     );
   }
   async getConfig(version: number) {

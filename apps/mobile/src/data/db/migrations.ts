@@ -99,6 +99,10 @@ export const MIGRATIONS: readonly string[] = [
     value TEXT NOT NULL
   );
   `,
+  // v2: several areas (campuses) per configuration version; NULL = the single centre/radius circle.
+  `
+  ALTER TABLE config_cache ADD COLUMN zones_json TEXT;
+  `,
 ];
 
 /** Minimal surface of expo-sqlite used by the runner (keeps it testable). */

@@ -1,5 +1,6 @@
 import type { ApiError as ApiErrorBody, TokenPair } from '@attendance/shared';
 import { ErrorCode } from '@attendance/shared';
+import { currentLanguage, i18n, t } from '../i18n';
 
 export const REFRESH_TOKEN_KEY = 'attendance-admin.refreshToken';
 
@@ -212,15 +213,24 @@ async function toApiError(res: Response): Promise<ApiRequestError> {
   );
 }
 
-/** Human-readable message for any thrown value. */
+/**
+ * Human-readable message for any thrown value, in the current language.
+ * English keeps the server's own message (it can be more specific); Thai translates known error codes
+ * (`common:errors.<CODE>`) and falls back to the server message for unknown ones.
+ */
 export function errorMessage(e: unknown): string {
   if (e instanceof ApiRequestError) {
-    if (e.isForbidden) return 'You do not have permission to perform this action.';
-    if (e.code === ErrorCode.VALIDATION_FAILED) return `Invalid input: ${e.message}`;
+    if (e.isForbidden) return t('common:errors.noPermission');
+    if (e.code === NETWORK_ERROR) return t('common:errors.NETWORK_ERROR');
+    if (e.code === ErrorCode.VALIDATION_FAILED) return t('common:errors.invalidInputDetail', { message: e.message });
+    if (currentLanguage() === 'en') return e.message;
+    const key = `common:errors.${e.code}`;
+    if (i18n.exists(key)) return (t as unknown as (k: string) => string)(key);
+    if (/^HTTP_\d+$/.test(e.code)) return t('common:errors.httpStatus', { status: String(e.status) });
     return e.message;
   }
   if (e instanceof Error) return e.message;
-  return 'Something went wrong.';
+  return t('common:errors.generic');
 }
 
 export const api = new ApiClient({ baseUrl: import.meta.env.VITE_API_URL || '/api/v1' });

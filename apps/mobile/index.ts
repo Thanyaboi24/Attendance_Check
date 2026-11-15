@@ -1,3 +1,5 @@
+// i18n first: UI and headless tasks (notification text) share the saved language.
+import { restoreSavedLanguage } from './src/i18n';
 import { registerRootComponent } from 'expo';
 import * as TaskManager from 'expo-task-manager';
 import { AppRegistry } from 'react-native';
@@ -15,4 +17,5 @@ AppRegistry.registerHeadlessTask(HEADLESS_TASKS.GRACE_PERIOD, () => gracePeriodT
 AppRegistry.registerHeadlessTask(HEADLESS_TASKS.SYNC, () => syncTask);
 AppRegistry.registerHeadlessTask(HEADLESS_TASKS.BOOT, () => bootTask);
 
+void restoreSavedLanguage();
 registerRootComponent(App);

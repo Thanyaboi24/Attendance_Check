@@ -142,6 +142,9 @@ model GeofenceConfiguration {
   centerLat         Float
   centerLng         Float
   radiusM           Int
+  /// All areas of this version as [{name, centerLat, centerLng, radiusM}]; null = the single circle above.
+  /// When set, the first entry is mirrored in centerLat/centerLng/radiusM.
+  zones             Json?
   gracePeriodSec    Int      @default(300)
   maxLocationAgeSec Int      @default(60)
   maxAccuracyM      Int      @default(30)

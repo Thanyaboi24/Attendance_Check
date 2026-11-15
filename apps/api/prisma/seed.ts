@@ -1,10 +1,10 @@
 /**
- * Development seed: geofence v1 (SIIT Rangsit, 150 m) and one account per role.
+ * Development seed: geofence v1 (SIIT Rangsit + Bangkadi, 150 m each) and one account per role.
  * Idempotent: re-running does not duplicate rows. Never run against production.
  */
 import { PrismaClient, type Role } from '@prisma/client';
 import argon2 from 'argon2';
-import { DEFAULT_GEOFENCE } from '@attendance/shared';
+import { DEFAULT_GEOFENCE, SIIT_CAMPUSES } from '@attendance/shared';
 
 const prisma = new PrismaClient();
 
@@ -29,13 +29,15 @@ async function main() {
 
   if ((await prisma.geofenceConfiguration.count()) === 0) {
     const sysAdmin = await prisma.user.findUniqueOrThrow({ where: { email: 'system.admin@siit.tu.ac.th' } });
+    const zones = SIIT_CAMPUSES.map((c) => ({ ...c, radiusM: DEFAULT_GEOFENCE.radiusM }));
     await prisma.geofenceConfiguration.create({
       data: {
-        name: 'SIIT Rangsit campus',
-        centerLat: 14.0693,
-        centerLng: 100.6035,
+        name: 'SIIT campuses',
+        centerLat: zones[0]!.centerLat,
+        centerLng: zones[0]!.centerLng,
+        zones,
         ...DEFAULT_GEOFENCE,
-        reason: 'Initial configuration (slide: 150 m radius)',
+        reason: 'Initial configuration: Rangsit and Bangkadi campuses, 150 m radius each',
         createdById: sysAdmin.id,
       },
     });

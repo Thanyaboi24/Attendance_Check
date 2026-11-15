@@ -1,3 +1,4 @@
+import { GeofenceZoneSchema } from './geofence';
 import { z } from 'zod';
 import { AccountStatusSchema, RoleSchema, UserProfileSchema } from './auth';
 import {
@@ -101,6 +102,7 @@ export const AdminRequestDetailSchema = AdminRequestDtoSchema.extend({
     centerLat: z.number(),
     centerLng: z.number(),
     radiusM: z.number(),
+    zones: z.array(GeofenceZoneSchema).min(1),
     maxLocationAgeSec: z.number(),
     maxAccuracyM: z.number(),
   }),

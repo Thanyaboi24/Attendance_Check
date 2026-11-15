@@ -5,5 +5,6 @@ module.exports = {
   moduleNameMapper: {
     '^@attendance/shared$': '<rootDir>/../../packages/shared/src/index.ts',
   },
+  setupFilesAfterEnv: ['<rootDir>/__tests__/setup/i18n.ts'],
   clearMocks: true,
 };

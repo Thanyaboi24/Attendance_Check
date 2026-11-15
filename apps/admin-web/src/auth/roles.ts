@@ -1,31 +1,36 @@
 import { Role } from '@attendance/shared';
+import { t } from '../i18n';
+import type { en } from '../i18n/en';
 
 const AA = Role.ATTENDANCE_ADMIN;
 const SA = Role.SYSTEM_ADMIN;
 
+export type NavKey = Exclude<keyof (typeof en)['common']['nav'], 'main'>;
+
 export interface NavItem {
   path: string;
-  label: string;
+  /** Key under `common:nav`; translate at render time with `navLabel`. */
+  labelKey: NavKey;
   roles: readonly Role[];
 }
 
 /** Navigation and route access per role (mirrors the backend RBAC in docs/API.md, which remains authoritative). */
 export const NAV_ITEMS: readonly NavItem[] = [
-  { path: '/dashboard', label: 'Dashboard', roles: [AA, SA] },
-  { path: '/sessions', label: 'Attendance sessions', roles: [AA] },
-  { path: '/requests', label: 'Attendance requests', roles: [AA] },
-  { path: '/corrections', label: 'Corrections', roles: [AA] },
-  { path: '/reports', label: 'Reports', roles: [AA, SA] },
-  { path: '/users', label: 'Users', roles: [SA] },
-  { path: '/geofence', label: 'Geofence', roles: [AA, SA] },
-  { path: '/audit-logs', label: 'Audit log', roles: [AA, SA] },
+  { path: '/dashboard', labelKey: 'dashboard', roles: [AA, SA] },
+  { path: '/sessions', labelKey: 'sessions', roles: [AA] },
+  { path: '/requests', labelKey: 'requests', roles: [AA] },
+  { path: '/corrections', labelKey: 'corrections', roles: [AA] },
+  { path: '/reports', labelKey: 'reports', roles: [AA, SA] },
+  { path: '/users', labelKey: 'users', roles: [SA] },
+  { path: '/geofence', labelKey: 'geofence', roles: [AA, SA] },
+  { path: '/audit-logs', labelKey: 'auditLog', roles: [AA, SA] },
 ];
 
-export const ROLE_LABEL: Record<Role, string> = {
-  STAFF: 'Staff',
-  ATTENDANCE_ADMIN: 'Attendance Administrator',
-  SYSTEM_ADMIN: 'System Administrator',
-};
+/** Navigation label in the current language. */
+export const navLabel = (n: NavItem): string => t(`common:nav.${n.labelKey}`);
+
+/** Role name in the current language (looked up at render time). */
+export const roleLabel = (role: Role): string => t(`common:role.${role}`);
 
 export function navFor(role: Role | undefined): NavItem[] {
   if (!role) return [];

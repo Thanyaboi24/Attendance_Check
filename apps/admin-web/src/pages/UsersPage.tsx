@@ -2,12 +2,12 @@ import { useState } from 'react';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import type { z } from 'zod';
+import { useTranslation } from 'react-i18next';
+import { z } from 'zod';
 import {
   AccountStatus,
-  CreateUserSchema,
   Role,
-  UpdateUserSchema,
+  RoleSchema,
   type AdminUserDto,
   type CreateUser,
   type Paginated,
@@ -15,11 +15,15 @@ import {
 } from '@attendance/shared';
 import { api } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
-import { ROLE_LABEL } from '../auth/roles';
+import { roleLabel } from '../auth/roles';
 import { Badge, ConfirmDialog, Dialog, Empty, ErrorBox, FieldError, Loading, PageHeader, Pagination } from '../components/ui';
-import { fmtDateTime, humanize } from '../lib/format';
+import { t } from '../i18n';
+import { enumLabel, fmtDateTime } from '../lib/format';
+import { emailField, msg } from '../lib/validation';
 
 const PAGE_SIZE = 25;
+/** The global `t` (always the current language), for messages built outside render. */
+const tr = t;
 
 type Pending =
   | { kind: 'toggle'; user: AdminUserDto }
@@ -27,7 +31,11 @@ type Pending =
   | { kind: 'edit'; user: AdminUserDto }
   | { kind: 'create' };
 
+/** A flash message is kept as a function so it follows the language switch. */
+type Flash = { text: () => string };
+
 export function UsersPage() {
+  const { t } = useTranslation(['users', 'common']);
   const qc = useQueryClient();
   const { user: me } = useAuth();
   const [q, setQ] = useState('');
@@ -35,7 +43,7 @@ export function UsersPage() {
   const [status, setStatus] = useState('');
   const [page, setPage] = useState(1);
   const [pending, setPending] = useState<Pending | null>(null);
-  const [flash, setFlash] = useState<string | null>(null);
+  const [flash, setFlash] = useState<Flash | null>(null);
 
   const query = { q: q.trim(), role, status, page, pageSize: PAGE_SIZE };
   const list = useQuery({
@@ -50,7 +58,10 @@ export function UsersPage() {
         status: u.status === AccountStatus.DEACTIVATED ? AccountStatus.ACTIVE : AccountStatus.DEACTIVATED,
       } satisfies UpdateUser),
     onSuccess: (u) => {
-      setFlash(`${u.fullName} is now ${humanize(u.status).toLowerCase()}.`);
+      setFlash({
+        text: () =>
+          tr('users:flash.statusChanged', { name: u.fullName, status: enumLabel('accountStatus', u.status).toLowerCase() }),
+      });
       setPending(null);
       void qc.invalidateQueries({ queryKey: ['users'] });
     },
@@ -58,7 +69,7 @@ export function UsersPage() {
   const resend = useMutation({
     mutationFn: (u: AdminUserDto) => api.post<{ ok: true }>(`/admin/users/${u.id}/resend-activation`),
     onSuccess: (_r, u) => {
-      setFlash(`Activation email re-sent to ${u.email}.`);
+      setFlash({ text: () => tr('users:flash.activationResent', { email: u.email }) });
       setPending(null);
     },
   });
@@ -72,50 +83,50 @@ export function UsersPage() {
   return (
     <>
       <PageHeader
-        title="Users"
-        subtitle="Staff and administrator accounts."
+        title={t('title')}
+        subtitle={t('subtitle')}
         actions={
           <button type="button" className="btn btn-primary" onClick={() => setPending({ kind: 'create' })}>
-            New user
+            {t('newUser')}
           </button>
         }
       />
       {flash ? (
         <div className="alert alert-success" role="status">
-          {flash}{' '}
+          {flash.text()}{' '}
           <button type="button" className="btn-link" onClick={() => setFlash(null)}>
-            Dismiss
+            {t('common:actions.dismiss')}
           </button>
         </div>
       ) : null}
       <div className="filters">
         <label className="field grow">
-          <span>Search</span>
+          <span>{t('common:filters.search')}</span>
           <input
             type="search"
-            placeholder="Name, staff ID or email"
+            placeholder={t('common:filters.nameStaffIdOrEmail')}
             value={q}
             onChange={(e) => (setQ(e.target.value), setPage(1))}
           />
         </label>
         <label className="field">
-          <span>Role</span>
+          <span>{t('common:filters.role')}</span>
           <select value={role} onChange={(e) => (setRole(e.target.value), setPage(1))}>
-            <option value="">All</option>
+            <option value="">{t('common:filters.all')}</option>
             {Object.values(Role).map((r) => (
               <option key={r} value={r}>
-                {ROLE_LABEL[r]}
+                {roleLabel(r)}
               </option>
             ))}
           </select>
         </label>
         <label className="field">
-          <span>Status</span>
+          <span>{t('common:filters.status')}</span>
           <select value={status} onChange={(e) => (setStatus(e.target.value), setPage(1))}>
-            <option value="">All</option>
+            <option value="">{t('common:filters.all')}</option>
             {Object.values(AccountStatus).map((s) => (
               <option key={s} value={s}>
-                {humanize(s)}
+                {enumLabel('accountStatus', s)}
               </option>
             ))}
           </select>
@@ -125,19 +136,19 @@ export function UsersPage() {
       {list.isPending ? <Loading /> : null}
       {list.data ? (
         list.data.items.length === 0 ? (
-          <Empty>No users match these filters.</Empty>
+          <Empty>{t('empty')}</Empty>
         ) : (
           <>
             <div className="table-wrap">
               <table>
                 <thead>
                   <tr>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Department</th>
-                    <th>Role</th>
-                    <th>Status</th>
-                    <th>Last sign-in</th>
+                    <th>{t('col.name')}</th>
+                    <th>{t('col.email')}</th>
+                    <th>{t('col.department')}</th>
+                    <th>{t('col.role')}</th>
+                    <th>{t('col.status')}</th>
+                    <th>{t('col.lastSignIn')}</th>
                     <th />
                   </tr>
                 </thead>
@@ -150,14 +161,14 @@ export function UsersPage() {
                       </td>
                       <td>{u.email}</td>
                       <td>{u.department}</td>
-                      <td>{ROLE_LABEL[u.role]}</td>
+                      <td>{roleLabel(u.role)}</td>
                       <td>
-                        <Badge value={u.status} />
+                        <Badge value={u.status} kind="accountStatus" />
                       </td>
                       <td>{fmtDateTime(u.lastLoginAt)}</td>
                       <td className="right nowrap">
                         <button type="button" className="btn btn-small" onClick={() => setPending({ kind: 'edit', user: u })}>
-                          Edit
+                          {t('common:actions.edit')}
                         </button>{' '}
                         {u.status === AccountStatus.PENDING_ACTIVATION ? (
                           <button
@@ -165,17 +176,17 @@ export function UsersPage() {
                             className="btn btn-small"
                             onClick={() => setPending({ kind: 'resend', user: u })}
                           >
-                            Resend activation
+                            {t('actions.resendActivation')}
                           </button>
                         ) : (
                           <button
                             type="button"
                             className={`btn btn-small ${u.status === AccountStatus.ACTIVE ? 'btn-danger-outline' : ''}`}
                             disabled={u.id === me?.id}
-                            title={u.id === me?.id ? 'You cannot deactivate your own account' : undefined}
+                            title={u.id === me?.id ? t('actions.cannotDeactivateSelf') : undefined}
                             onClick={() => setPending({ kind: 'toggle', user: u })}
                           >
-                            {u.status === AccountStatus.ACTIVE ? 'Deactivate' : 'Activate'}
+                            {u.status === AccountStatus.ACTIVE ? t('actions.deactivate') : t('actions.activate')}
                           </button>
                         )}
                       </td>
@@ -191,13 +202,13 @@ export function UsersPage() {
 
       {pending?.kind === 'toggle' ? (
         <ConfirmDialog
-          title={pending.user.status === AccountStatus.ACTIVE ? 'Deactivate account?' : 'Activate account?'}
+          title={pending.user.status === AccountStatus.ACTIVE ? t('confirm.deactivateTitle') : t('confirm.activateTitle')}
           message={
             pending.user.status === AccountStatus.ACTIVE
-              ? `${pending.user.fullName} will be signed out everywhere and can no longer sign in or record attendance.`
-              : `${pending.user.fullName} will be able to sign in again.`
+              ? t('confirm.deactivateBody', { name: pending.user.fullName })
+              : t('confirm.activateBody', { name: pending.user.fullName })
           }
-          confirmLabel={pending.user.status === AccountStatus.ACTIVE ? 'Deactivate' : 'Activate'}
+          confirmLabel={pending.user.status === AccountStatus.ACTIVE ? t('actions.deactivate') : t('actions.activate')}
           danger={pending.user.status === AccountStatus.ACTIVE}
           busy={toggle.isPending}
           error={toggle.error}
@@ -207,9 +218,9 @@ export function UsersPage() {
       ) : null}
       {pending?.kind === 'resend' ? (
         <ConfirmDialog
-          title="Resend activation email?"
-          message={`A new activation link (valid 24 hours) will be sent to ${pending.user.email}.`}
-          confirmLabel="Resend"
+          title={t('confirm.resendTitle')}
+          message={t('confirm.resendBody', { email: pending.user.email })}
+          confirmLabel={t('actions.resend')}
           busy={resend.isPending}
           error={resend.error}
           onConfirm={() => resend.mutate(pending.user)}
@@ -220,7 +231,7 @@ export function UsersPage() {
         <CreateUserDialog
           onClose={closePending}
           onCreated={(u) => {
-            setFlash(`Account created for ${u.fullName}; an activation email was sent to ${u.email}.`);
+            setFlash({ text: () => tr('users:flash.created', { name: u.fullName, email: u.email }) });
             setPending(null);
           }}
         />
@@ -231,7 +242,7 @@ export function UsersPage() {
           isSelf={pending.user.id === me?.id}
           onClose={closePending}
           onSaved={(u) => {
-            setFlash(`Saved changes to ${u.fullName}.`);
+            setFlash({ text: () => tr('users:flash.saved', { name: u.fullName }) });
             setPending(null);
           }}
         />
@@ -240,18 +251,46 @@ export function UsersPage() {
   );
 }
 
+/** Same rules as the shared `CreateUserSchema` / `UpdateUserSchema`, with messages in the current language. */
+const fullNameField = () =>
+  z
+    .string()
+    .trim()
+    .min(1, msg(() => t('users:validation.fullName')))
+    .max(120);
+const departmentField = () =>
+  z
+    .string()
+    .trim()
+    .min(1, msg(() => t('users:validation.department')))
+    .max(120);
+
+const CreateUserForm = z.object({
+  staffId: z
+    .string()
+    .trim()
+    .min(1, msg(() => t('users:validation.staffId')))
+    .max(40),
+  email: emailField(),
+  fullName: fullNameField(),
+  department: departmentField(),
+  role: RoleSchema,
+});
+type CreateUserForm = z.output<typeof CreateUserForm>;
+
 function CreateUserDialog({ onClose, onCreated }: { onClose: () => void; onCreated: (u: AdminUserDto) => void }) {
+  const { t } = useTranslation(['users', 'common']);
   const qc = useQueryClient();
   const {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<CreateUser, unknown, z.output<typeof CreateUserSchema>>({
-    resolver: zodResolver(CreateUserSchema),
+  } = useForm<CreateUser, unknown, CreateUserForm>({
+    resolver: zodResolver(CreateUserForm),
     defaultValues: { staffId: '', email: '', fullName: '', department: '', role: Role.STAFF },
   });
   const create = useMutation({
-    mutationFn: (body: z.output<typeof CreateUserSchema>) => api.post<AdminUserDto>('/admin/users', body),
+    mutationFn: (body: CreateUserForm) => api.post<AdminUserDto>('/admin/users', body),
     onSuccess: (u) => {
       void qc.invalidateQueries({ queryKey: ['users'] });
       onCreated(u);
@@ -259,46 +298,46 @@ function CreateUserDialog({ onClose, onCreated }: { onClose: () => void; onCreat
   });
   return (
     <Dialog
-      title="New user"
+      title={t('form.newTitle')}
       onClose={onClose}
       footer={
         <>
           <button type="button" className="btn btn-ghost" onClick={onClose}>
-            Cancel
+            {t('common:actions.cancel')}
           </button>
           <button type="submit" form="create-user" className="btn btn-primary" disabled={create.isPending}>
-            Create and send activation email
+            {t('form.create')}
           </button>
         </>
       }
     >
       <form id="create-user" className="grid-2" onSubmit={handleSubmit((v) => create.mutate(v))} noValidate>
         <label className="field">
-          <span>Staff ID</span>
+          <span>{t('form.staffId')}</span>
           <input {...register('staffId')} />
           <FieldError message={errors.staffId?.message} />
         </label>
         <label className="field">
-          <span>Institutional email</span>
+          <span>{t('form.email')}</span>
           <input type="email" {...register('email')} />
           <FieldError message={errors.email?.message} />
         </label>
         <label className="field">
-          <span>Full name</span>
+          <span>{t('form.fullName')}</span>
           <input {...register('fullName')} />
           <FieldError message={errors.fullName?.message} />
         </label>
         <label className="field">
-          <span>Department</span>
+          <span>{t('form.department')}</span>
           <input {...register('department')} />
           <FieldError message={errors.department?.message} />
         </label>
         <label className="field">
-          <span>Role</span>
+          <span>{t('form.role')}</span>
           <select {...register('role')}>
             {Object.values(Role).map((r) => (
               <option key={r} value={r}>
-                {ROLE_LABEL[r]}
+                {roleLabel(r)}
               </option>
             ))}
           </select>
@@ -311,7 +350,7 @@ function CreateUserDialog({ onClose, onCreated }: { onClose: () => void; onCreat
   );
 }
 
-const EditUserSchema = UpdateUserSchema.required({ fullName: true, department: true }).omit({ status: true });
+const EditUserSchema = z.object({ fullName: fullNameField(), department: departmentField(), role: RoleSchema.optional() });
 
 function EditUserDialog({
   user,
@@ -324,6 +363,7 @@ function EditUserDialog({
   onClose: () => void;
   onSaved: (u: AdminUserDto) => void;
 }) {
+  const { t } = useTranslation(['users', 'common']);
   const qc = useQueryClient();
   const {
     register,
@@ -342,43 +382,43 @@ function EditUserDialog({
   });
   return (
     <Dialog
-      title={`Edit ${user.fullName}`}
+      title={t('form.editTitle', { name: user.fullName })}
       onClose={onClose}
       footer={
         <>
           <button type="button" className="btn btn-ghost" onClick={onClose}>
-            Cancel
+            {t('common:actions.cancel')}
           </button>
           <button type="submit" form="edit-user" className="btn btn-primary" disabled={save.isPending}>
-            Save
+            {t('common:actions.save')}
           </button>
         </>
       }
     >
       <form id="edit-user" className="grid-2" onSubmit={handleSubmit((v) => save.mutate(v))} noValidate>
         <label className="field">
-          <span>Full name</span>
+          <span>{t('form.fullName')}</span>
           <input {...register('fullName')} />
           <FieldError message={errors.fullName?.message} />
         </label>
         <label className="field">
-          <span>Department</span>
+          <span>{t('form.department')}</span>
           <input {...register('department')} />
           <FieldError message={errors.department?.message} />
         </label>
         <label className="field">
-          <span>Role</span>
+          <span>{t('form.role')}</span>
           <select {...register('role')} disabled={isSelf}>
             {Object.values(Role).map((r) => (
               <option key={r} value={r}>
-                {ROLE_LABEL[r]}
+                {roleLabel(r)}
               </option>
             ))}
           </select>
-          {isSelf ? <span className="muted small">You cannot change your own role.</span> : null}
+          {isSelf ? <span className="muted small">{t('form.cannotChangeOwnRole')}</span> : null}
         </label>
         <div className="field">
-          <span>Email / staff ID</span>
+          <span>{t('form.emailAndStaffId')}</span>
           <div className="muted">
             {user.email} · {user.staffId}
           </div>

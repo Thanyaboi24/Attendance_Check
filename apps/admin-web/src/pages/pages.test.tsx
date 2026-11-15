@@ -37,7 +37,15 @@ const detail: AdminRequestDetail = {
   device: { model: 'Pixel 8', os: 'Android 15', appVersion: '1.0.0' },
   userConfirmedAt: null,
   clientRecordedAt: '2026-10-30T01:05:11.000Z',
-  config: { version: 2, centerLat: 14.0693, centerLng: 100.6035, radiusM: 150, maxLocationAgeSec: 60, maxAccuracyM: 30 },
+  config: {
+    version: 2,
+    centerLat: 14.0693,
+    centerLng: 100.6035,
+    radiusM: 150,
+    zones: [{ name: 'SIIT Rangsit', centerLat: 14.0693, centerLng: 100.6035, radiusM: 150 }],
+    maxLocationAgeSec: 60,
+    maxAccuracyM: 30,
+  },
 };
 
 describe('Request detail', () => {

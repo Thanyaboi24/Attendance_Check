@@ -1,4 +1,5 @@
 import { RequestStatus, SyncStatus } from '@attendance/shared';
+import { t } from '../i18n';
 import type { LocalRequest } from './models';
 
 /**
@@ -27,61 +28,47 @@ export function displayStatusOf(r: Pick<LocalRequest, 'status' | 'syncStatus' | 
   }
 }
 
-export const DISPLAY_LABEL: Record<DisplayStatus, string> = {
-  RECORDED: 'Recorded',
-  PENDING: 'Pending',
-  UNCERTAIN_LOCATION: 'Uncertain location',
-  FAILED: 'Failed',
-  UNSYNCHRONIZED: 'Pending synchronization',
-  CANCELLED: 'Cancelled',
-};
+const DISPLAY_STATUSES: readonly DisplayStatus[] = ['RECORDED', 'PENDING', 'UNCERTAIN_LOCATION', 'FAILED', 'UNSYNCHRONIZED', 'CANCELLED'];
 
-/** Human explanation for resolution / error codes. */
-export function reasonText(code: string | null | undefined): string | null {
-  switch (code) {
-    case null:
-    case undefined:
-      return null;
-    case 'UNCERTAIN_LOCATION':
-      return 'Your location could not be verified (accuracy too low, reading too old, or near the boundary).';
-    case 'LOCATION_UNAVAILABLE':
-      return 'No location fix could be obtained (location services off, permission missing or timeout).';
-    case 'NOTIFICATION_FAILED':
-      return 'The confirmation notification could not be shown, so automatic attendance was not allowed.';
-    case 'INVALID_STATE':
-      return 'Your attendance state changed before this request finished.';
-    case 'CONFIRMED_OPPOSITE_SIDE':
-      return 'You were confirmed on the other side of the attendance area.';
-    case 'MOCK_LOCATION':
-      return 'A mock (simulated) location was detected. The request was rejected.';
-    case 'SESSION_ALREADY_OPEN':
-      return 'You are already checked in.';
-    case 'NO_OPEN_SESSION':
-      return 'You are not checked in.';
-    case 'ACTIVE_REQUEST_EXISTS':
-      return 'Another attendance request is still pending.';
-    case 'SUPERSEDED':
-      return 'Replaced by a newer request.';
-    case 'LOCATION_NOT_CONFIRMED':
-      return 'The server could not confirm your location for this request.';
-    case 'CONFIG_VERSION_UNKNOWN':
-      return 'The geofence configuration used by this request is unknown to the server.';
-    default:
-      return code;
-  }
+/** Label of a display status in the current language. */
+export function displayLabel(status: DisplayStatus): string {
+  return t(`common:displayStatus.${status}`);
 }
 
+/** Same as `displayLabel`, as a lookup table; every read follows the current language. */
+export const DISPLAY_LABEL: Readonly<Record<DisplayStatus, string>> = Object.defineProperties(
+  {} as Record<DisplayStatus, string>,
+  Object.fromEntries(DISPLAY_STATUSES.map((s) => [s, { get: () => displayLabel(s), enumerable: true }])),
+);
+
+const REASON_CODES = [
+  'UNCERTAIN_LOCATION',
+  'LOCATION_UNAVAILABLE',
+  'NOTIFICATION_FAILED',
+  'INVALID_STATE',
+  'CONFIRMED_OPPOSITE_SIDE',
+  'MOCK_LOCATION',
+  'SESSION_ALREADY_OPEN',
+  'NO_OPEN_SESSION',
+  'ACTIVE_REQUEST_EXISTS',
+  'SUPERSEDED',
+  'LOCATION_NOT_CONFIRMED',
+  'CONFIG_VERSION_UNKNOWN',
+] as const;
+type ReasonCode = (typeof REASON_CODES)[number];
+const isReasonCode = (c: string): c is ReasonCode => (REASON_CODES as readonly string[]).includes(c);
+
+/** Human explanation for resolution / error codes (current language; unknown codes are shown as is). */
+export function reasonText(code: string | null | undefined): string | null {
+  if (code == null) return null;
+  return isReasonCode(code) ? t(`common:reason.${code}`) : code;
+}
+
+const UNCERTAIN_REASONS = ['STALE_READING', 'LOW_ACCURACY', 'STRADDLES_BOUNDARY', 'MISSING_DATA'] as const;
+type UncertainReasonKey = (typeof UNCERTAIN_REASONS)[number];
+
 export function uncertainReasonText(reason: string | null | undefined): string {
-  switch (reason) {
-    case 'STALE_READING':
-      return 'The location reading was too old.';
-    case 'LOW_ACCURACY':
-      return 'The location accuracy was too low (more than the allowed uncertainty).';
-    case 'STRADDLES_BOUNDARY':
-      return 'You are too close to the boundary to be sure which side you are on.';
-    case 'MISSING_DATA':
-      return 'The location reading was incomplete.';
-    default:
-      return 'Your location was not on the expected side of the attendance area.';
-  }
+  const key: UncertainReasonKey | 'OTHER' =
+    reason != null && (UNCERTAIN_REASONS as readonly string[]).includes(reason) ? (reason as UncertainReasonKey) : 'OTHER';
+  return t(`common:uncertainReason.${key}`);
 }

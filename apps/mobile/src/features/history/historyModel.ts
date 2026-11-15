@@ -1,19 +1,18 @@
 import { addDays, type AttendanceRequestDto, formatBangkokTime, type Method, RequestType, type SessionDto, toBangkokDate } from '@attendance/shared';
+import { currentLanguage, t } from '../../i18n';
+import { dateRange, dayShort } from '../../i18n/format';
 
 export type HistoryStatus = 'COMPLETED' | 'OPEN' | 'NEEDS_REVIEW' | 'CORRECTED';
 
-export const HISTORY_STATUS_LABEL: Record<HistoryStatus, string> = {
-  COMPLETED: 'Completed',
-  OPEN: 'Open',
-  NEEDS_REVIEW: 'Needs review',
-  CORRECTED: 'Corrected',
-};
+/** Status pill text (current language). */
+export function historyStatusLabel(status: HistoryStatus): string {
+  return t(`history:status.${status}`);
+}
 
-export const METHOD_LABEL: Record<Method, string> = {
-  MANUAL: 'Manual',
-  AUTOMATIC: 'Automatic',
-  ADMIN_CORRECTED: 'Admin corrected',
-};
+/** "Manual" / "Automatic" / "Admin corrected" (current language). */
+export function methodLabel(method: Method): string {
+  return t(`history:method.${method}`);
+}
 
 /** One card on the history screen (mockup page 6): a session, or a day with only an unresolved request. */
 export interface HistoryCard {
@@ -34,38 +33,30 @@ export interface HistoryCard {
   needsCorrection: boolean;
 }
 
-const DAY = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const MONTH = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
 const utc = (date: string) => new Date(`${date}T00:00:00Z`);
 
-/** "Fri 31 Oct" for a Bangkok calendar date (YYYY-MM-DD). */
+/** "Fri 31 Oct" / "ศ. 31 ต.ค." for a Bangkok calendar date (YYYY-MM-DD). */
 export function dayLabel(date: string): string {
-  const d = utc(date);
-  return `${DAY[d.getUTCDay()]} ${d.getUTCDate()} ${MONTH[d.getUTCMonth()]}`;
+  return dayShort(date);
 }
 
-/** "Wed 29 Oct 2026" */
+/** "Wed 29 Oct 2026" / "พ. 29 ต.ค. 2569" (Buddhist Era year in Thai). */
 export function longDayLabel(date: string): string {
-  return `${dayLabel(date)} ${utc(date).getUTCFullYear()}`;
+  const y = utc(date).getUTCFullYear();
+  return `${dayShort(date)} ${currentLanguage() === 'th' ? y + 543 : y}`;
 }
 
 /** "27 Oct – 31 Oct 2026" (year shown once when both ends share it). */
 export function rangeLabel(from: string, to: string): string {
-  const a = utc(from);
-  const b = utc(to);
-  const short = (d: Date) => `${d.getUTCDate()} ${MONTH[d.getUTCMonth()]}`;
-  if (a.getUTCFullYear() === b.getUTCFullYear()) return `${short(a)} – ${short(b)} ${b.getUTCFullYear()}`;
-  return `${short(a)} ${a.getUTCFullYear()} – ${short(b)} ${b.getUTCFullYear()}`;
+  return dateRange(from, to);
 }
 
 export type RangePreset = 'THIS_WEEK' | 'LAST_7' | 'LAST_30';
 
-export const RANGE_PRESET_LABEL: Record<RangePreset, string> = {
-  THIS_WEEK: 'This week',
-  LAST_7: 'Last 7 days',
-  LAST_30: 'Last 30 days',
-};
+/** Range menu labels (current language); call at render time. */
+export function rangePresetLabels(): Record<RangePreset, string> {
+  return { THIS_WEEK: t('history:range.THIS_WEEK'), LAST_7: t('history:range.LAST_7'), LAST_30: t('history:range.LAST_30') };
+}
 
 /** Date range for a preset, as Bangkok calendar dates. A week starts on Monday. */
 export function presetRange(preset: RangePreset, today: string): { from: string; to: string } {
@@ -83,12 +74,10 @@ export function presetRange(preset: RangePreset, today: string): { from: string;
 
 export type MethodFilter = 'ALL' | Method;
 
-export const METHOD_FILTER_LABEL: Record<MethodFilter, string> = {
-  ALL: 'All methods',
-  MANUAL: 'Manual',
-  AUTOMATIC: 'Automatic',
-  ADMIN_CORRECTED: 'Admin corrected',
-};
+/** Method menu labels (current language); call at render time. */
+export function methodFilterLabels(): Record<MethodFilter, string> {
+  return { ALL: t('history:allMethods'), MANUAL: methodLabel('MANUAL'), AUTOMATIC: methodLabel('AUTOMATIC'), ADMIN_CORRECTED: methodLabel('ADMIN_CORRECTED') };
+}
 
 type IssueLike = Pick<AttendanceRequestDto, 'id' | 'type' | 'geofenceDetectedAt'>;
 
@@ -109,13 +98,13 @@ export function buildHistoryCards(sessions: SessionDto[], issues: IssueLike[], t
     let outLabel: string;
     if (s.checkOutAt) {
       status = s.corrected ? 'CORRECTED' : 'COMPLETED';
-      outLabel = s.checkOutMethod ? METHOD_LABEL[s.checkOutMethod] : '';
+      outLabel = s.checkOutMethod ? methodLabel(s.checkOutMethod) : '';
     } else if (workDate === today) {
       status = s.corrected ? 'CORRECTED' : 'OPEN';
-      outLabel = 'Not yet';
+      outLabel = t('history:cell.notYet');
     } else {
       status = 'NEEDS_REVIEW';
-      outLabel = outIssues.has(workDate) ? 'Unresolved' : 'Missing';
+      outLabel = outIssues.has(workDate) ? t('history:cell.unresolved') : t('history:cell.missing');
     }
     cards.push({
       key: s.id,
@@ -123,7 +112,7 @@ export function buildHistoryCards(sessions: SessionDto[], issues: IssueLike[], t
       dayLabel: dayLabel(workDate),
       status,
       inTime: formatBangkokTime(s.checkInAt),
-      inLabel: METHOD_LABEL[s.checkInMethod],
+      inLabel: methodLabel(s.checkInMethod),
       outTime: s.checkOutAt ? formatBangkokTime(s.checkOutAt) : null,
       outLabel,
       inMethod: s.checkInMethod,
@@ -144,7 +133,7 @@ export function buildHistoryCards(sessions: SessionDto[], issues: IssueLike[], t
       dayLabel: dayLabel(workDate),
       status: 'NEEDS_REVIEW',
       inTime: null,
-      inLabel: 'Unresolved',
+      inLabel: t('history:cell.unresolved'),
       outTime: null,
       outLabel: '',
       inMethod: null,

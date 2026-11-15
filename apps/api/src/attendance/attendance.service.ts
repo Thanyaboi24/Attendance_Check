@@ -34,6 +34,7 @@ import {
   type NotificationEventInput,
   type UnresolvedAttendance,
 } from '@attendance/shared';
+import { geofenceParams } from '../geofence/geofence';
 import { AuditService } from '../audit/audit.service';
 import { AppException, Errors } from '../common/app-exception';
 import { ClockService } from '../common/clock.service';
@@ -337,7 +338,7 @@ export class AttendanceService {
   private storeEvidence(ctx: ActionContext, stage: Stage, input: EvidenceInput): Promise<LocationEvidence> {
     const c = classify(
       { lat: input.lat, lng: input.lng, accuracyM: input.accuracyM, measuredAt: input.measuredAt },
-      ctx.config,
+      geofenceParams(ctx.config),
       ctx.now,
     );
     return ctx.tx.locationEvidence.create({

@@ -4,6 +4,7 @@
  *
  * Every error carries a string `kind` so checks do not depend on `instanceof` across bundles/realms.
  */
+import { i18n, t } from '../i18n';
 
 export class ApiRequestError extends Error {
   readonly kind = 'api' as const;
@@ -24,7 +25,7 @@ export class ApiRequestError extends Error {
 /** No response (offline, DNS, timeout, connection reset). Always retryable. */
 export class NetworkError extends Error {
   readonly kind = 'network' as const;
-  constructor(message = 'Network unavailable') {
+  constructor(message: string = t('errors:networkUnavailable')) {
     super(message);
     this.name = 'NetworkError';
   }
@@ -33,7 +34,7 @@ export class NetworkError extends Error {
 /** The refresh token was rejected; the user has to sign in again. Outbox entries are kept. */
 export class AuthRequiredError extends Error {
   readonly kind = 'auth' as const;
-  constructor(message = 'Please sign in again') {
+  constructor(message: string = t('errors:signInAgain')) {
     super(message);
     this.name = 'AuthRequiredError';
   }
@@ -82,4 +83,23 @@ export function isRetryable(e: unknown): boolean {
 export function errorMessage(e: unknown): string {
   if (e instanceof Error) return e.message;
   return String(e);
+}
+
+/** English messages of the shared zod schemas (packages/shared) → translation keys. */
+const VALIDATION_KEY = {
+  'Enter a valid email address': 'errors:validation.email',
+  'Enter your password': 'errors:validation.passwordRequired',
+  'Password must be at least 8 characters': 'errors:validation.passwordMin',
+  'Password must contain a letter': 'errors:validation.passwordLetter',
+  'Password must contain a digit': 'errors:validation.passwordDigit',
+} as const;
+
+/**
+ * Validation message from a shared schema, in the current language. Messages without a translation are shown as
+ * they are in English and replaced by `fallback` in other languages; a missing message gives `fallback`.
+ */
+export function validationMessage(message: string | undefined, fallback: string): string {
+  if (message == null) return fallback;
+  if (message in VALIDATION_KEY) return t(VALIDATION_KEY[message as keyof typeof VALIDATION_KEY]);
+  return i18n.language === 'en' ? message : fallback;
 }

@@ -2,18 +2,21 @@ import { LoginRequestSchema } from '@attendance/shared';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text, TextInput } from 'react-native-paper';
 import { getDeps } from '../../app/container';
 import { refreshDashboard } from '../../app/controller';
 import { palette } from '../../app/theme';
 import { BigButton, Notice, Panel } from '../../ui/kit';
-import { ADMIN_WEB_MESSAGE, login } from '../../domain/useCases/auth';
+import { validationMessage } from '../../domain/errors';
+import { adminWebMessage, login } from '../../domain/useCases/auth';
 import { META_ONBOARDED } from '../../domain/useCases/common';
 import { useAppStore } from '../../store/appStore';
 
 /** Mockup page 1: institutional email, password, error area, Log in, Forgot password, no public sign-up. */
 export function LoginScreen() {
+  const { t } = useTranslation(['auth', 'errors', 'common']);
   const navigation = useNavigation();
   const notStaffMessage = useAppStore((s) => s.notStaffMessage);
   const [email, setEmail] = useState('');
@@ -26,7 +29,7 @@ export function LoginScreen() {
     setError(null);
     const parsed = LoginRequestSchema.safeParse({ email, password });
     if (!parsed.success) {
-      setError(parsed.error.issues[0]?.message ?? 'Enter your email and password');
+      setError(validationMessage(parsed.error.issues[0]?.message, t('login.enterEmailPassword')));
       return;
     }
     setBusy(true);
@@ -42,20 +45,20 @@ export function LoginScreen() {
           await refreshDashboard();
           return;
         case 'NOT_STAFF':
-          store.setSignedOut(ADMIN_WEB_MESSAGE);
+          store.setSignedOut(adminWebMessage());
           return;
         case 'INVALID_CREDENTIALS':
           // Generic: never reveals whether the email exists.
-          setError('Email or password is incorrect. Please try again.');
+          setError(t('login.invalidCredentials'));
           return;
         case 'ACCOUNT_LOCKED':
-          setError('Too many failed attempts. Please wait 15 minutes and try again.');
+          setError(t('login.locked'));
           return;
         case 'ACCOUNT_INACTIVE':
-          setError('This account is not active. Check your activation email or contact the administrator.');
+          setError(t('login.inactive'));
           return;
         case 'NETWORK':
-          setError('Cannot reach the server. Check your connection and try again.');
+          setError(t('login.network'));
           return;
         case 'ERROR':
           setError(out.message);
@@ -72,17 +75,17 @@ export function LoginScreen() {
         <View style={styles.logo}>
           <MaterialCommunityIcons name="map-marker-check-outline" size={44} color="#FFFFFF" />
         </View>
-        <Text style={styles.title}>Staff Login</Text>
-        <Text style={styles.subtitle}>Faculty Attendance System</Text>
+        <Text style={styles.title}>{t('login.title')}</Text>
+        <Text style={styles.subtitle}>{t('common:appName')}</Text>
 
         {notStaffMessage ? <Notice tone="amber">{notStaffMessage}</Notice> : null}
 
         <Panel style={styles.form}>
           <View style={{ gap: 8 }}>
-            <Text style={styles.label}>Institutional email</Text>
+            <Text style={styles.label}>{t('login.email')}</Text>
             <TextInput
-              accessibilityLabel="Institutional email"
-              placeholder="name@university.ac.th"
+              accessibilityLabel={t('login.email')}
+              placeholder={t('login.emailPlaceholder')}
               value={email}
               onChangeText={setEmail}
               autoCapitalize="none"
@@ -94,9 +97,9 @@ export function LoginScreen() {
             />
           </View>
           <View style={{ gap: 8 }}>
-            <Text style={styles.label}>Password</Text>
+            <Text style={styles.label}>{t('login.password')}</Text>
             <TextInput
-              accessibilityLabel="Password"
+              accessibilityLabel={t('login.password')}
               value={password}
               onChangeText={setPassword}
               secureTextEntry={!showPassword}
@@ -104,7 +107,13 @@ export function LoginScreen() {
               mode="outlined"
               outlineStyle={styles.inputOutline}
               style={styles.input}
-              right={<TextInput.Icon icon={showPassword ? 'eye-off' : 'eye'} onPress={() => setShowPassword((v) => !v)} />}
+              right={
+                <TextInput.Icon
+                  icon={showPassword ? 'eye-off' : 'eye'}
+                  accessibilityLabel={showPassword ? t('login.hidePassword') : t('login.showPassword')}
+                  onPress={() => setShowPassword((v) => !v)}
+                />
+              }
               onSubmitEditing={onSubmit}
             />
           </View>
@@ -115,14 +124,14 @@ export function LoginScreen() {
             </View>
           ) : null}
           <BigButton onPress={() => void onSubmit()} busy={busy}>
-            Log in
+            {t('login.submit')}
           </BigButton>
           <Pressable onPress={() => navigation.navigate('ForgotPassword')} accessibilityRole="link" style={{ alignSelf: 'center' }} hitSlop={8}>
-            <Text style={styles.link}>Forgot password?</Text>
+            <Text style={styles.link}>{t('login.forgot')}</Text>
           </Pressable>
         </Panel>
 
-        <Text style={styles.footer}>Accounts are created by the faculty administrator.{'\n'}No public sign-up.</Text>
+        <Text style={styles.footer}>{t('login.footer')}</Text>
       </ScrollView>
     </KeyboardAvoidingView>
   );

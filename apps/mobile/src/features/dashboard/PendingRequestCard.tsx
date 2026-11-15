@@ -1,5 +1,6 @@
 import { formatBangkokTime, RequestType } from '@attendance/shared';
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, View } from 'react-native';
 import { Button, Text } from 'react-native-paper';
 import Svg, { Circle } from 'react-native-svg';
@@ -14,8 +15,9 @@ const C = 2 * Math.PI * R;
 
 /** Ring that empties as the grace period runs out (page 4). */
 function CountdownRing({ fraction, label }: { fraction: number; label: string }) {
+  const { t } = useTranslation('dashboard');
   return (
-    <View style={styles.ring} accessibilityLabel={`${label} remaining`}>
+    <View style={styles.ring} accessibilityLabel={t('pending.remaining', { time: label })}>
       <Svg width={SIZE} height={SIZE}>
         <Circle cx={SIZE / 2} cy={SIZE / 2} r={R} stroke={palette.amberTrack} strokeWidth={STROKE} fill="none" />
         <Circle
@@ -47,32 +49,31 @@ interface Props {
  * the deadline is taken by the background task after a fresh location check, never by this timer.
  */
 export function PendingRequestCard({ request, busy, onConfirm }: Props) {
+  const { t } = useTranslation('dashboard');
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
-    const t = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(t);
+    const timer = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(timer);
   }, []);
 
   const isIn = request.type === RequestType.CHECK_IN;
   const cd = countdown(request.notificationPostedAt ?? request.geofenceDetectedAt, request.deadlineAt, now);
   const notifFailed = request.notificationStatus === 'FAILED';
-  const side = isIn ? 'inside' : 'outside';
-
-  let headline = 'Waiting for your response';
-  let detail = `Auto ${isIn ? 'check-in' : 'check-out'} at about ${formatBangkokTime(request.deadlineAt)} if your location is still ${side}.`;
+  let headline: string = t('pending.waiting');
+  let detail: string = t(isIn ? 'pending.autoIn' : 'pending.autoOut', { time: formatBangkokTime(request.deadlineAt) });
   if (notifFailed) {
-    headline = 'Please confirm manually';
-    detail = 'The notification could not be shown, so automatic attendance is not allowed for this request.';
+    headline = t('pending.confirmManually');
+    detail = t('pending.notificationFailed');
   } else if (cd.expired) {
-    headline = 'Verifying your location…';
-    detail = `The grace period is over. The app is checking that you are still ${side} before recording.`;
+    headline = t('pending.verifying');
+    detail = t(isIn ? 'pending.graceOverIn' : 'pending.graceOverOut');
   }
 
   return (
     <View style={styles.card}>
       <View style={styles.rowBetween}>
-        <Text style={styles.kicker}>{isIn ? 'Pending check-in' : 'Pending check-out'}</Text>
-        <Text style={styles.muted}>Request #{shortRequestId(request.requestId)}</Text>
+        <Text style={styles.kicker}>{isIn ? t('pending.kickerIn') : t('pending.kickerOut')}</Text>
+        <Text style={styles.muted}>{t('pending.requestRef', { id: shortRequestId(request.requestId) })}</Text>
       </View>
 
       <View style={styles.body}>
@@ -84,7 +85,7 @@ export function PendingRequestCard({ request, busy, onConfirm }: Props) {
       </View>
 
       {request.lastError === 'LOCATION_NOT_CONFIRMED' ? (
-        <Text style={styles.warn}>Your last confirmation could not be verified by the server. Try again or request a correction.</Text>
+        <Text style={styles.warn}>{t('pending.notVerified')}</Text>
       ) : null}
 
       <Button
@@ -96,17 +97,17 @@ export function PendingRequestCard({ request, busy, onConfirm }: Props) {
         contentStyle={styles.buttonContent}
         labelStyle={styles.buttonLabel}
       >
-        {isIn ? 'Check in now' : 'Check out now'}
+        {isIn ? t('pending.checkInNow') : t('pending.checkOutNow')}
       </Button>
-      <Text style={styles.muted}>Dismissing the notification does not cancel this request.</Text>
+      <Text style={styles.muted}>{t('pending.dismissNote')}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   card: { backgroundColor: palette.surface, borderRadius: 20, borderWidth: 1.5, borderColor: palette.amberBorder, padding: 20, gap: 16 },
-  rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  kicker: { fontSize: 16, fontWeight: '700', color: palette.amberText },
+  rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
+  kicker: { flexShrink: 1, fontSize: 16, fontWeight: '700', color: palette.amberText },
   muted: { fontSize: 13, color: palette.textMuted },
   body: { flexDirection: 'row', alignItems: 'center', gap: 18 },
   ring: { width: SIZE, height: SIZE, alignItems: 'center', justifyContent: 'center' },

@@ -95,6 +95,12 @@ Official attendance time is always the server approval time (never backdated). E
 | POST | `/admin/users/{id}/resend-activation` | SA | — | `{ ok: true }` |
 | GET | `/admin/geofence/configs` | AA, SA | — | `GeofenceConfig[]` newest first |
 | PUT | `/admin/geofence/config` | SA | `UpdateGeofenceConfigSchema` | `GeofenceConfig` (new version) |
+
+**Several attendance areas (campuses).** A configuration version holds `zones: [{ name, centerLat, centerLng, radiusM }]`
+(1–10 areas; names must differ). A reading is `CONFIRMED_INSIDE` when its accuracy circle fits inside **any** area,
+`CONFIRMED_OUTSIDE` only when it is clear of **every** area, otherwise `UNCERTAIN`. `PUT /admin/geofence/config` takes
+`zones` instead of a single centre/radius; responses still include `centerLat`/`centerLng`/`radiusM` (= the first area)
+for older clients. The phone registers one Android geofence per area (`faculty-v{version}`, `faculty-v{version}-z{n}`).
 | GET | `/admin/audit-logs` | AA, SA | `AuditLogQuerySchema` | `Paginated<AuditLogDto>` |
 
 ## Misc

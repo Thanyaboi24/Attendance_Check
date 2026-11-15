@@ -4,6 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
 import React, { useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Menu, Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getDeps } from '../../app/container';
@@ -13,15 +14,15 @@ import { mono, Pill, type PillTone } from '../../ui/kit';
 import {
   buildHistoryCards,
   filterByMethod,
-  HISTORY_STATUS_LABEL,
   type HistoryCard,
   type HistoryStatus,
-  METHOD_FILTER_LABEL,
+  historyStatusLabel,
+  methodFilterLabels,
   type MethodFilter,
   presetRange,
-  RANGE_PRESET_LABEL,
   type RangePreset,
   rangeLabel,
+  rangePresetLabels,
 } from './historyModel';
 
 const STATUS_TONE: Record<HistoryStatus, PillTone> = {
@@ -89,6 +90,7 @@ function TimeColumn({ title, time, label }: { title: string; time: string | null
 
 /** Mockup page 6: own history only (the backend uses the user id from the token). Dates are Bangkok calendar days. */
 export function HistoryScreen() {
+  const { t, i18n } = useTranslation('history');
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const today = toBangkokDate(new Date());
@@ -103,7 +105,8 @@ export function HistoryScreen() {
 
   const cards = useMemo(
     () => filterByMethod(buildHistoryCards(query.data?.sessions ?? [], query.data?.issues ?? [], today), method),
-    [query.data, today, method],
+    // Card labels are translated: rebuild when the language changes.
+    [query.data, today, method, i18n.language],
   );
 
   function openCorrection(c: HistoryCard) {
@@ -112,9 +115,11 @@ export function HistoryScreen() {
       workDate: c.workDate,
       checkInAt: c.checkInAt,
       checkOutAt: c.checkOutAt,
-      statusLabel: c.status === 'NEEDS_REVIEW' ? (c.sessionId ? 'Unresolved' : 'Missing') : HISTORY_STATUS_LABEL[c.status],
+      statusLabel: c.status === 'NEEDS_REVIEW' ? (c.sessionId ? t('cell.unresolved') : t('cell.missing')) : historyStatusLabel(c.status),
     });
   }
+
+  const methodLabels = methodFilterLabels();
 
   return (
     <FlatList
@@ -126,30 +131,30 @@ export function HistoryScreen() {
       onRefresh={() => void query.refetch()}
       ListHeaderComponent={
         <View style={{ gap: 16 }}>
-          <Text style={styles.title}>Attendance history</Text>
+          <Text style={styles.title}>{t('title')}</Text>
           <View style={styles.filters}>
-            <Dropdown value={preset} label={rangeLabel(from, to)} options={RANGE_PRESET_LABEL} onChange={setPreset} chevron grow />
-            <Dropdown value={method} label={METHOD_FILTER_LABEL[method]} options={METHOD_FILTER_LABEL} onChange={setMethod} />
+            <Dropdown value={preset} label={rangeLabel(from, to)} options={rangePresetLabels()} onChange={setPreset} chevron grow />
+            <Dropdown value={method} label={methodLabels[method]} options={methodLabels} onChange={setMethod} />
           </View>
           {query.isError ? (
-            <Text style={styles.error}>{isNetworkError(query.error) ? 'Offline: history is loaded from the server only.' : 'Could not load the history.'}</Text>
+            <Text style={styles.error}>{isNetworkError(query.error) ? t('offline') : t('loadFailed')}</Text>
           ) : null}
         </View>
       }
-      ListEmptyComponent={query.isLoading ? <Text style={styles.empty}>Loading…</Text> : <Text style={styles.empty}>No attendance in this range.</Text>}
+      ListEmptyComponent={query.isLoading ? <Text style={styles.empty}>{t('loading')}</Text> : <Text style={styles.empty}>{t('empty')}</Text>}
       renderItem={({ item }) => (
         <View style={styles.card}>
           <View style={styles.cardHead}>
             <Text style={styles.day}>{item.dayLabel}</Text>
-            <Pill tone={STATUS_TONE[item.status]}>{HISTORY_STATUS_LABEL[item.status]}</Pill>
+            <Pill tone={STATUS_TONE[item.status]}>{historyStatusLabel(item.status)}</Pill>
           </View>
           <View style={styles.cols}>
-            <TimeColumn title="In" time={item.inTime} label={item.inLabel} />
-            <TimeColumn title="Out" time={item.outTime} label={item.outLabel} />
+            <TimeColumn title={t('in')} time={item.inTime} label={item.inLabel} />
+            <TimeColumn title={t('out')} time={item.outTime} label={item.outLabel} />
           </View>
           {item.needsCorrection ? (
             <Pressable onPress={() => openCorrection(item)} accessibilityRole="link" hitSlop={8}>
-              <Text style={styles.link}>Request a correction</Text>
+              <Text style={styles.link}>{t('requestCorrection')}</Text>
             </Pressable>
           ) : null}
         </View>
@@ -178,8 +183,8 @@ const styles = StyleSheet.create({
   error: { color: '#DC2626' },
   empty: { padding: 16, color: palette.textMuted },
   card: { backgroundColor: palette.surface, borderRadius: 20, borderWidth: 1, borderColor: palette.border, padding: 20, gap: 14 },
-  cardHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  day: { fontSize: 18, fontWeight: '700', color: palette.text },
+  cardHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
+  day: { flexShrink: 1, fontSize: 18, fontWeight: '700', color: palette.text },
   cols: { flexDirection: 'row', gap: 12 },
   colTitle: { fontSize: 14, color: palette.textMuted },
   time: { fontSize: 24, color: palette.text },

@@ -1,14 +1,17 @@
+import { zonesOf } from '@attendance/shared';
 import { useNavigation } from '@react-navigation/native';
 import * as Application from 'expo-application';
 import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ScrollView, StyleSheet } from 'react-native';
-import { Button, Card, Dialog, List, Portal, Text } from 'react-native-paper';
+import { Button, Card, Dialog, List, Portal, RadioButton, Text } from 'react-native-paper';
 import { getDeps } from '../../app/container';
 import { syncNow } from '../../app/controller';
 import type { EvidenceRecord } from '../../domain/models';
 import { type LogoutOutcome, logout } from '../../domain/useCases/auth';
+import { isLanguage, LANGUAGE_NAME, LANGUAGES, setLanguage } from '../../i18n';
 import { isSchedulerAvailable } from '../../services/scheduler';
 import { useAppStore } from '../../store/appStore';
 import { API_URL, APP_VARIANT, GOOGLE_MAPS_CONFIGURED } from '../../utils/env';
@@ -40,6 +43,8 @@ export function SettingsScreen() {
   const [warning, setWarning] = useState<Extract<LogoutOutcome, { kind: 'NEEDS_CONFIRMATION' }> | null>(null);
   const [busy, setBusy] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+  const { t, i18n } = useTranslation('settings');
+  const language = isLanguage(i18n.language) ? i18n.language : 'en';
 
   async function doLogout(confirmed: boolean) {
     setBusy(true);
@@ -74,36 +79,62 @@ export function SettingsScreen() {
     }
   }
 
+  const config = model?.config;
+  const area = config
+    ? t('about.areaSummary', { name: config.name, version: String(config.version), grace: String(config.gracePeriodSec) }) +
+      zonesOf(config)
+        .map((z) => `\n${t('about.zone', { name: z.name, radius: String(z.radiusM) })}`)
+        .join('')
+    : t('about.notLoaded');
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Card mode="outlined">
-        <Card.Title title={user?.fullName ?? 'Signed in'} subtitle={`${user?.email ?? ''} · ${user?.staffId ?? ''}`} />
+        <Card.Title title={user?.fullName ?? t('account.signedIn')} subtitle={`${user?.email ?? ''} · ${user?.staffId ?? ''}`} />
         <Card.Content>
           <Text variant="bodySmall">{user?.department}</Text>
         </Card.Content>
       </Card>
 
       <Card mode="outlined">
+        <Card.Title title={t('language.title')} titleNumberOfLines={2} left={(p) => <List.Icon {...p} icon="translate" />} />
+        <RadioButton.Group value={language} onValueChange={(v) => isLanguage(v) && void setLanguage(v)}>
+          {LANGUAGES.map((lang) => (
+            <RadioButton.Item
+              key={lang}
+              value={lang}
+              label={LANGUAGE_NAME[lang]}
+              accessibilityLabel={`${t('language.a11y')}: ${LANGUAGE_NAME[lang]}`}
+            />
+          ))}
+        </RadioButton.Group>
+      </Card>
+
+      <Card mode="outlined">
         <List.Item
-          title="Permissions & monitoring"
-          description={monitoring?.active ? 'Monitoring active' : 'Monitoring limited — tap to review'}
+          title={t('permissions.title')}
+          titleNumberOfLines={2}
+          description={monitoring?.active ? t('permissions.active') : t('permissions.limited')}
+          descriptionNumberOfLines={3}
           left={(p) => <List.Icon {...p} icon="shield-check" />}
           onPress={() => navigation.navigate('Permissions')}
         />
         <List.Item
-          title="Synchronise now"
-          description={`${model?.outboxCount ?? 0} pending · ${model?.failedOutboxCount ?? 0} failed`}
+          title={t('sync.title')}
+          titleNumberOfLines={2}
+          description={t('sync.summary', { pending: String(model?.outboxCount ?? 0), failed: String(model?.failedOutboxCount ?? 0) })}
+          descriptionNumberOfLines={2}
           left={(p) => <List.Icon {...p} icon="cloud-sync" />}
           onPress={() => void syncNow()}
         />
       </Card>
 
       <Card mode="outlined">
-        <Card.Title title="Evaluation log" subtitle="Timestamps of every detection, notification, fix and decision" />
+        <Card.Title title={t('evaluation.title')} subtitle={t('evaluation.subtitle')} titleNumberOfLines={2} subtitleNumberOfLines={3} />
         <Card.Actions style={{ flexWrap: 'wrap' }}>
-          <Button onPress={() => void exportAs('requests-csv')}>Requests CSV</Button>
-          <Button onPress={() => void exportAs('events-csv')}>Events CSV</Button>
-          <Button onPress={() => void exportAs('json')}>JSON</Button>
+          <Button onPress={() => void exportAs('requests-csv')}>{t('evaluation.requestsCsv')}</Button>
+          <Button onPress={() => void exportAs('events-csv')}>{t('evaluation.eventsCsv')}</Button>
+          <Button onPress={() => void exportAs('json')}>{t('evaluation.json')}</Button>
         </Card.Actions>
         {exportError ? (
           <Card.Content>
@@ -113,48 +144,46 @@ export function SettingsScreen() {
       </Card>
 
       <Card mode="outlined">
-        <Card.Title title="About" />
+        <Card.Title title={t('about.title')} />
         <Card.Content style={{ gap: 2 }}>
           <Text variant="bodySmall">
-            Version {Application.nativeApplicationVersion ?? '1.0.0'} ({Application.nativeBuildVersion ?? 'dev'}) · {APP_VARIANT}
+            {t('about.version', {
+              version: Application.nativeApplicationVersion ?? '1.0.0',
+              build: Application.nativeBuildVersion ?? 'dev',
+              variant: APP_VARIANT,
+            })}
           </Text>
-          <Text variant="bodySmall">API: {API_URL}</Text>
+          <Text variant="bodySmall">{t('about.api', { url: API_URL })}</Text>
+          <Text variant="bodySmall">{t('about.area', { text: area })}</Text>
+          <Text variant="bodySmall">{t('about.lastSync', { time: fmtDateTime(model?.snapshotFetchedAt) })}</Text>
           <Text variant="bodySmall">
-            Area: {model?.config ? `${model.config.name} v${model.config.version}, radius ${model.config.radiusM} m, grace ${model.config.gracePeriodSec} s` : 'not loaded'}
+            {t('about.scheduler', { value: isSchedulerAvailable ? t('about.schedulerAvailable') : t('about.schedulerMissing') })}
           </Text>
-          <Text variant="bodySmall">Last server sync: {fmtDateTime(model?.snapshotFetchedAt)}</Text>
-          <Text variant="bodySmall">Background scheduler: {isSchedulerAvailable ? 'available' : 'NOT available in this build'}</Text>
-          <Text variant="bodySmall">Google Maps: {GOOGLE_MAPS_CONFIGURED ? 'configured' : 'not configured (text fallback)'}</Text>
+          <Text variant="bodySmall">{t('about.maps', { value: GOOGLE_MAPS_CONFIGURED ? t('about.mapsConfigured') : t('about.mapsMissing') })}</Text>
         </Card.Content>
       </Card>
 
       <Button mode="outlined" icon="logout" onPress={() => void doLogout(false)} loading={busy} disabled={busy}>
-        Sign out
+        {t('signOut.button')}
       </Button>
 
       <Portal>
         <Dialog visible={warning != null} onDismiss={() => setWarning(null)}>
-          <Dialog.Title>Sign out?</Dialog.Title>
+          <Dialog.Title>{t('signOut.title')}</Dialog.Title>
           <Dialog.Content style={{ gap: 8 }}>
-            <Text variant="bodyMedium">Signing out stops location monitoring on this phone.</Text>
+            <Text variant="bodyMedium">{t('signOut.stopsMonitoring')}</Text>
             {warning?.openSession ? (
-              <Text variant="bodyMedium">
-                You are checked in since {fmtDateTime(warning.openSession.checkInAt)}. Your session stays open and you will NOT be checked out
-                automatically.
-              </Text>
+              <Text variant="bodyMedium">{t('signOut.openSession', { time: fmtDateTime(warning.openSession.checkInAt) })}</Text>
             ) : null}
-            {warning?.pendingRequest ? <Text variant="bodyMedium">A pending check-in/check-out request will not be completed automatically.</Text> : null}
+            {warning?.pendingRequest ? <Text variant="bodyMedium">{t('signOut.pendingRequest')}</Text> : null}
             {warning && warning.unsyncedCount > 0 ? (
-              <Text variant="bodyMedium">
-                {warning.unsyncedCount} item(s) are not synchronised yet. The app will try to send them now; anything that cannot be sent is
-                discarded.
-              </Text>
+              <Text variant="bodyMedium">{t('signOut.unsynced', { count: warning.unsyncedCount })}</Text>
             ) : null}
           </Dialog.Content>
-          <Dialog.Actions>
-            <Button onPress={() => setWarning(null)}>Stay signed in</Button>
+          <Dialog.Actions style={{ flexWrap: 'wrap' }}>
+            <Button onPress={() => setWarning(null)}>{t('signOut.stay')}</Button>
             <Button onPress={() => void doLogout(true)} loading={busy}>
-              Sign out
+              {t('signOut.confirm')}
             </Button>
           </Dialog.Actions>
         </Dialog>

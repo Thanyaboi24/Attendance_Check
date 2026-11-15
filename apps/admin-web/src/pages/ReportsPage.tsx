@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api, errorMessage } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { canExportAttendance } from '../auth/roles';
@@ -8,13 +9,15 @@ import { lastDays, saveBlob } from '../lib/format';
 type ReportKind = 'attendance' | 'evaluation';
 
 export function ReportsPage() {
+  const { t, i18n } = useTranslation(['reports', 'common']);
   const { user } = useAuth();
   const initial = lastDays(30);
   const [from, setFrom] = useState(initial.from);
   const [to, setTo] = useState(initial.to);
   const [department, setDepartment] = useState('');
   const [busy, setBusy] = useState<ReportKind | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  // The error itself is kept (not its text) so the message follows the language switch.
+  const [error, setError] = useState<unknown>(null);
   const invalid = !from || !to || from > to;
 
   const download = async (kind: ReportKind) => {
@@ -26,7 +29,7 @@ export function ReportsPage() {
       const { blob, filename } = await api.download(`/admin/reports/${kind}.csv`, query);
       saveBlob(blob, filename ?? `${kind}_${from}_${to}.csv`);
     } catch (e) {
-      setError(errorMessage(e));
+      setError(e);
     } finally {
       setBusy(null);
     }
@@ -36,36 +39,44 @@ export function ReportsPage() {
 
   return (
     <>
-      <PageHeader title="Reports" subtitle="CSV exports; dates are Bangkok calendar days and times are Bangkok time." />
+      <PageHeader
+        title={t('title')}
+        subtitle={
+          <>
+            {t('subtitle')}
+            {i18n.language !== 'en' ? <> {t('csvNote')}</> : null}
+          </>
+        }
+      />
       <div className="card">
         <div className="filters">
           <label className="field">
-            <span>From</span>
+            <span>{t('common:filters.from')}</span>
             <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
           </label>
           <label className="field">
-            <span>To</span>
+            <span>{t('common:filters.to')}</span>
             <input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
           </label>
           {showAttendance ? (
             <label className="field">
-              <span>Department (attendance report, optional)</span>
+              <span>{t('departmentOptional')}</span>
               <input value={department} onChange={(e) => setDepartment(e.target.value)} />
             </label>
           ) : null}
         </div>
-        {invalid ? <div className="alert alert-error">Choose a valid date range (“From” not after “To”).</div> : null}
+        {invalid ? <div className="alert alert-error">{t('invalidRange')}</div> : null}
         {error ? (
           <div className="alert alert-error" role="alert">
-            {error}
+            {errorMessage(error)}
           </div>
         ) : null}
         <div className="report-list">
           {showAttendance ? (
             <div className="report">
               <div>
-                <h3>Attendance report</h3>
-                <p className="muted small">One row per session: staff, check-in/out times and methods, corrections.</p>
+                <h3>{t('attendance.title')}</h3>
+                <p className="muted small">{t('attendance.description')}</p>
               </div>
               <button
                 type="button"
@@ -73,17 +84,14 @@ export function ReportsPage() {
                 disabled={invalid || busy !== null}
                 onClick={() => void download('attendance')}
               >
-                {busy === 'attendance' ? 'Preparing…' : 'Download attendance.csv'}
+                {busy === 'attendance' ? t('preparing') : t('attendance.download')}
               </button>
             </div>
           ) : null}
           <div className="report">
             <div>
-              <h3>Evaluation report</h3>
-              <p className="muted small">
-                One row per attendance request with every timestamp, device, configuration version, distance and
-                classification (DS2 chapter 3 metrics).
-              </p>
+              <h3>{t('evaluation.title')}</h3>
+              <p className="muted small">{t('evaluation.description')}</p>
             </div>
             <button
               type="button"
@@ -91,7 +99,7 @@ export function ReportsPage() {
               disabled={invalid || busy !== null}
               onClick={() => void download('evaluation')}
             >
-              {busy === 'evaluation' ? 'Preparing…' : 'Download evaluation.csv'}
+              {busy === 'evaluation' ? t('preparing') : t('evaluation.download')}
             </button>
           </div>
         </div>

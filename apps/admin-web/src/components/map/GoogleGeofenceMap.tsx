@@ -1,7 +1,8 @@
 import { Fragment, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { APIProvider, Circle, Map, Marker, type MapMouseEvent } from '@vis.gl/react-google-maps';
 import { RADIUS_MAX_M, RADIUS_MIN_M } from '@attendance/shared';
-import { fmtMetres, humanize } from '../../lib/format';
+import { enumLabel, fmtMetres } from '../../lib/format';
 import { CLASS_COLOR, GEOFENCE_COLOR, roundCoord, type GeofenceMapProps } from './types';
 
 /** Zoom level that fits roughly 3 radii into ~400 px at the given latitude. */
@@ -16,11 +17,14 @@ export default function GoogleGeofenceMap({
   apiKey,
   center,
   radiusM,
+  areaName,
+  otherAreas = [],
   evidence = [],
   onCenterChange,
   onRadiusChange,
   height = 360,
 }: GeofenceMapProps & { apiKey: string }) {
+  const { t } = useTranslation(['geofence', 'common']);
   // Initial camera only; the map stays uncontrolled so the admin can pan/zoom freely.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const initial = useMemo(() => ({ center, zoom: zoomFor(radiusM, center.lat) }), []);
@@ -62,7 +66,22 @@ export default function GoogleGeofenceMap({
               if (v !== Math.round(radiusM)) onRadiusChange(v);
             }}
           />
-          <Marker position={center} title="Geofence centre" />
+          <Marker position={center} title={areaName ? t('map.centre', { name: areaName }) : t('map.geofenceCentre')} />
+          {otherAreas.map((a) => (
+            <Fragment key={a.name}>
+              <Circle
+                center={a.center}
+                radius={a.radiusM}
+                strokeColor={GEOFENCE_COLOR}
+                strokeOpacity={0.6}
+                strokeWeight={2}
+                fillColor={GEOFENCE_COLOR}
+                fillOpacity={0.06}
+                clickable={false}
+              />
+              <Marker position={a.center} title={t('map.centre', { name: a.name })} opacity={0.7} />
+            </Fragment>
+          ))}
           {evidence.map((e) => (
             <Fragment key={e.id}>
               {e.accuracyM ? (
@@ -79,7 +98,11 @@ export default function GoogleGeofenceMap({
               ) : null}
               <Marker
                 position={{ lat: e.lat, lng: e.lng }}
-                title={`${e.label}: ${humanize(e.classification)}, accuracy ${fmtMetres(e.accuracyM)}`}
+                title={t('map.evidenceTitle', {
+                  label: e.label,
+                  class: enumLabel('locationClass', e.classification),
+                  accuracy: fmtMetres(e.accuracyM),
+                })}
                 icon={{
                   path: 0, // google.maps.SymbolPath.CIRCLE
                   scale: 6,
@@ -94,7 +117,7 @@ export default function GoogleGeofenceMap({
         </Map>
       </div>
       {onCenterChange || onRadiusChange ? (
-        <div className="map-note">Click the map or drag the circle to move the centre; drag the circle edge to resize.</div>
+        <div className="map-note">{t('map.editHint')}</div>
       ) : null}
     </APIProvider>
   );

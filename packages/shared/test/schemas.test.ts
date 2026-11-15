@@ -45,17 +45,18 @@ describe('schemas', () => {
   });
 
   it('limits the geofence radius to 1..1000 m', () => {
-    const base = {
-      name: 'SIIT',
-      centerLat: 14,
-      centerLng: 100,
-      gracePeriodSec: 300,
-      maxLocationAgeSec: 60,
-      maxAccuracyM: 30,
-      reason: 'field test',
-    };
-    expect(UpdateGeofenceConfigSchema.safeParse({ ...base, radiusM: 1001 }).success).toBe(false);
-    expect(UpdateGeofenceConfigSchema.safeParse({ ...base, radiusM: 150 }).success).toBe(true);
+    const base = { name: 'SIIT', gracePeriodSec: 300, maxLocationAgeSec: 60, maxAccuracyM: 30, reason: 'field test' };
+    const zone = (radiusM: number, name = 'Rangsit') => ({ name, centerLat: 14, centerLng: 100, radiusM });
+    expect(UpdateGeofenceConfigSchema.safeParse({ ...base, zones: [zone(1001)] }).success).toBe(false);
+    expect(UpdateGeofenceConfigSchema.safeParse({ ...base, zones: [zone(150)] }).success).toBe(true);
+  });
+
+  it('accepts several named areas but not zero or duplicate names', () => {
+    const base = { name: 'SIIT', gracePeriodSec: 300, maxLocationAgeSec: 60, maxAccuracyM: 30, reason: 'add campus' };
+    const zone = (name: string) => ({ name, centerLat: 14, centerLng: 100, radiusM: 150 });
+    expect(UpdateGeofenceConfigSchema.safeParse({ ...base, zones: [zone('Rangsit'), zone('Bangkadi')] }).success).toBe(true);
+    expect(UpdateGeofenceConfigSchema.safeParse({ ...base, zones: [] }).success).toBe(false);
+    expect(UpdateGeofenceConfigSchema.safeParse({ ...base, zones: [zone('Rangsit'), zone('rangsit ')] }).success).toBe(false);
   });
 
   it('enforces the password policy', () => {

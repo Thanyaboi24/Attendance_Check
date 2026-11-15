@@ -3,36 +3,41 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { type RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { useQueryClient } from '@tanstack/react-query';
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { RadioButton, Text, TextInput } from 'react-native-paper';
-import { DatePickerModal, en, registerTranslation, TimePickerModal } from 'react-native-paper-dates';
+import { DatePickerModal, en, registerTranslation, th, TimePickerModal } from 'react-native-paper-dates';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getDeps } from '../../app/container';
 import type { RootStackParamList } from '../../app/navigation/types';
 import { palette } from '../../app/theme';
 import { submitCorrection } from '../../domain/useCases/submitCorrection';
+import { currentLanguage } from '../../i18n';
 import { BigButton, mono, Notice, Panel, Pill } from '../../ui/kit';
 import { longDayLabel } from '../history/historyModel';
 import { correctionTimes, defaultFix, type FixKind, fixOptions, needsCheckIn, needsCheckOut, to12h } from './correctionModel';
 
 registerTranslation('en', en);
+registerTranslation('th', th);
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
 /** Field that opens the clock picker ("05:05 PM" + clock icon, page 7). */
 function TimeField({ label, value, onChange }: { label: string; value: string; onChange(v: string): void }) {
+  const { t } = useTranslation('correction');
   const [open, setOpen] = useState(false);
   const [h, m] = value ? value.split(':').map(Number) : [9, 0];
   return (
     <View style={{ gap: 8 }}>
       <Text style={styles.label}>{label}</Text>
-      <Pressable style={styles.field} onPress={() => setOpen(true)} accessibilityRole="button" accessibilityLabel={`${label}: ${value ? to12h(value) : 'not set'}`}>
-        <Text style={[styles.fieldText, !value && { color: palette.textMuted }]}>{value ? to12h(value) : 'Choose a time'}</Text>
+      <Pressable style={styles.field} onPress={() => setOpen(true)} accessibilityRole="button" accessibilityLabel={t('field.a11y', { label, value: value ? to12h(value) : t('field.notSet') })}>
+        <Text style={[styles.fieldText, !value && { color: palette.textMuted }]}>{value ? to12h(value) : t('field.choose')}</Text>
         <MaterialCommunityIcons name="clock-outline" size={24} color={palette.text} />
       </Pressable>
       <TimePickerModal
         visible={open}
-        locale="en"
+        locale={currentLanguage()}
+        use24HourClock={currentLanguage() === 'th'}
         hours={h}
         minutes={m}
         onDismiss={() => setOpen(false)}
@@ -47,6 +52,7 @@ function TimeField({ label, value, onChange }: { label: string; value: string; o
 
 /** FR09 / mockup page 7: what needs fixing, the correct Bangkok time(s), and a required reason. */
 export function CorrectionScreen() {
+  const { t } = useTranslation('correction');
   const route = useRoute<RouteProp<RootStackParamList, 'Correction'>>();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -71,7 +77,7 @@ export function CorrectionScreen() {
     setError(null);
     const times = correctionTimes(kind, workDate, checkIn, checkOut);
     if (!times.ok) return setError(times.message);
-    if (reason.trim().length < 5) return setError('Please describe the reason (at least 5 characters).');
+    if (reason.trim().length < 5) return setError(t('validation.reason'));
     setBusy(true);
     try {
       const deps = await getDeps();
@@ -85,10 +91,10 @@ export function CorrectionScreen() {
       switch (out.kind) {
         case 'SUBMITTED':
           await qc.invalidateQueries({ queryKey: ['corrections'] });
-          setDone('Submitted. An attendance administrator will review your request.');
+          setDone(t('submitted'));
           break;
         case 'PENDING_SYNC':
-          setDone('Saved on this phone. It will be sent when the connection returns (Pending synchronization).');
+          setDone(t('savedOffline'));
           break;
         case 'INVALID':
         case 'ERROR':
@@ -106,9 +112,9 @@ export function CorrectionScreen() {
         <MaterialCommunityIcons name="check-circle-outline" size={64} color={palette.greenText} />
         <Text style={styles.doneText}>{done}</Text>
         <View style={{ alignSelf: 'stretch', gap: 12 }}>
-          <BigButton onPress={() => navigation.navigate('Main', { screen: 'Requests' })}>View my requests</BigButton>
+          <BigButton onPress={() => navigation.navigate('Main', { screen: 'Requests' })}>{t('viewRequests')}</BigButton>
           <BigButton variant="outline" onPress={() => navigation.goBack()}>
-            Back
+            {t('back')}
           </BigButton>
         </View>
       </View>
@@ -116,15 +122,18 @@ export function CorrectionScreen() {
   }
 
   const inOut = session
-    ? `In ${session.checkInAt ? formatBangkokTime(session.checkInAt) : '--:--'} · Out ${session.checkOutAt ? formatBangkokTime(session.checkOutAt) : '--:--'}`
-    : 'No attendance recorded';
+    ? t('inOut', {
+        in: session.checkInAt ? formatBangkokTime(session.checkInAt) : '--:--',
+        out: session.checkOutAt ? formatBangkokTime(session.checkOutAt) : '--:--',
+      })
+    : t('noAttendance');
 
   return (
     <KeyboardAvoidingView style={styles.screen} behavior="height">
       <ScrollView contentContainerStyle={[styles.container, { paddingBottom: 24 }]} keyboardShouldPersistTaps="handled">
         <Panel style={styles.session}>
           <View style={{ flex: 1, gap: 4 }}>
-            <Text style={styles.muted}>{session ? 'Session' : 'Date'}</Text>
+            <Text style={styles.muted}>{session ? t('session') : t('date')}</Text>
             <Pressable disabled={!dateEditable} onPress={() => setDateOpen(true)} accessibilityRole={dateEditable ? 'button' : undefined}>
               <Text style={styles.sessionDate}>
                 {longDayLabel(workDate)}
@@ -137,7 +146,7 @@ export function CorrectionScreen() {
           {params.statusLabel ? <Pill tone="amber">{params.statusLabel}</Pill> : null}
         </Panel>
 
-        <Text style={styles.label}>What needs fixing?</Text>
+        <Text style={styles.label}>{t('whatToFix')}</Text>
         <RadioButton.Group onValueChange={(v) => setKind(v as FixKind)} value={kind}>
           <View style={{ gap: 10 }}>
             {fixOptions(session).map((o) => {
@@ -152,15 +161,15 @@ export function CorrectionScreen() {
           </View>
         </RadioButton.Group>
 
-        {needsCheckIn(kind) ? <TimeField label="Correct check-in time" value={checkIn} onChange={setCheckIn} /> : null}
-        {needsCheckOut(kind) ? <TimeField label="Correct check-out time" value={checkOut} onChange={setCheckOut} /> : null}
+        {needsCheckIn(kind) ? <TimeField label={t('correctCheckIn')} value={checkIn} onChange={setCheckIn} /> : null}
+        {needsCheckOut(kind) ? <TimeField label={t('correctCheckOut')} value={checkOut} onChange={setCheckOut} /> : null}
 
         <View style={{ gap: 8 }}>
-          <Text style={styles.label}>Reason (required)</Text>
+          <Text style={styles.label}>{t('reasonLabel')}</Text>
           <TextInput
             mode="outlined"
-            accessibilityLabel="Reason"
-            placeholder="e.g. Phone battery ran out before I left the building."
+            accessibilityLabel={t('reasonA11y')}
+            placeholder={t('reasonPlaceholder')}
             value={reason}
             onChangeText={setReason}
             multiline
@@ -170,18 +179,18 @@ export function CorrectionScreen() {
           />
         </View>
 
-        <Text style={styles.muted}>An attendance administrator reviews your request. The original record is kept and the change is logged.</Text>
+        <Text style={styles.muted}>{t('reviewNote')}</Text>
         {error ? <Notice tone="red">{error}</Notice> : null}
       </ScrollView>
 
       <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
         <BigButton onPress={() => void onSubmit()} busy={busy}>
-          Submit request
+          {t('submit')}
         </BigButton>
       </View>
 
       <DatePickerModal
-        locale="en"
+        locale={currentLanguage()}
         mode="single"
         visible={dateOpen}
         date={new Date(`${workDate}T12:00:00`)}
@@ -206,7 +215,7 @@ const styles = StyleSheet.create({
   label: { fontSize: 16, fontWeight: '700', color: palette.textSoft },
   option: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: palette.surface, borderRadius: 16, borderWidth: 1, borderColor: palette.border, paddingVertical: 8, paddingHorizontal: 12 },
   optionOn: { borderColor: palette.blue, borderWidth: 2, backgroundColor: palette.blueSoft },
-  optionText: { fontSize: 17, color: palette.text },
+  optionText: { flex: 1, fontSize: 17, color: palette.text },
   field: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', height: 58, paddingHorizontal: 18, borderRadius: 16, borderWidth: 1, borderColor: '#CBD5E1', backgroundColor: palette.surface },
   fieldText: { fontSize: 18, color: palette.text },
   footer: { paddingHorizontal: 20, paddingTop: 12, backgroundColor: palette.background },

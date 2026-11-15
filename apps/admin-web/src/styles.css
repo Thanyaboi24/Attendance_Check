@@ -9,7 +9,7 @@
   --danger: #dc2626;
   --radius: 8px;
   --shadow: 0 1px 2px rgba(15, 23, 42, 0.06), 0 1px 3px rgba(15, 23, 42, 0.04);
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans Thai', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans Thai', 'Leelawadee UI', Tahoma, sans-serif;
   font-size: 15px;
   line-height: 1.45;
   color: var(--text);
@@ -702,4 +702,38 @@ tr.expanded td {
 }
 .auth-card h1 {
   margin-bottom: 0.25rem;
+}
+
+/* Language switch (sidebar foot, login page) */
+.lang-switch {
+  display: inline-flex;
+  gap: 6px;
+}
+.sidebar-foot .lang-switch {
+  margin-top: 0.6rem;
+}
+.sidebar-foot .lang-switch .btn {
+  margin-top: 0;
+}
+.auth-lang {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.5rem;
+}
+
+/* Thai: taller line boxes for stacked vowels/tone marks; no letter-spacing or upper-casing (meaningless
+   for Thai and it breaks combining marks); let long Thai labels wrap instead of overflowing. */
+:lang(th) {
+  line-height: 1.6;
+}
+:lang(th) th {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 0.82rem;
+}
+:lang(th) .dialog-foot .btn,
+:lang(th) .report .btn,
+:lang(th) .page-header .btn {
+  white-space: normal;
+  text-align: center;
 }

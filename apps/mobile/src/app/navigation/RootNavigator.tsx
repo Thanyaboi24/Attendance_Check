@@ -2,6 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, View } from 'react-native';
 import { ForgotPasswordScreen } from '../../features/auth/ForgotPasswordScreen';
 import { LoginScreen } from '../../features/auth/LoginScreen';
@@ -27,6 +28,7 @@ const tabIcon =
 
 /** Home · History · Requests (mockups pages 3–6). Each tab draws its own title, so tab headers are hidden. */
 function MainTabs() {
+  const { t } = useTranslation();
   return (
     <Tabs.Navigator
       screenOptions={{
@@ -37,9 +39,9 @@ function MainTabs() {
         tabBarStyle: { paddingTop: 6, backgroundColor: palette.surface, borderTopColor: palette.border },
       }}
     >
-      <Tabs.Screen name="Dashboard" component={DashboardScreen} options={{ title: 'Home', tabBarIcon: tabIcon('home-outline') }} />
-      <Tabs.Screen name="History" component={HistoryScreen} options={{ title: 'History', tabBarIcon: tabIcon('calendar-blank-outline') }} />
-      <Tabs.Screen name="Requests" component={RequestsScreen} options={{ title: 'Requests', tabBarIcon: tabIcon('pencil-outline') }} />
+      <Tabs.Screen name="Dashboard" component={DashboardScreen} options={{ title: t('tabs.home'), tabBarIcon: tabIcon('home-outline') }} />
+      <Tabs.Screen name="History" component={HistoryScreen} options={{ title: t('tabs.history'), tabBarIcon: tabIcon('calendar-blank-outline') }} />
+      <Tabs.Screen name="Requests" component={RequestsScreen} options={{ title: t('tabs.requests'), tabBarIcon: tabIcon('pencil-outline') }} />
     </Tabs.Navigator>
   );
 }
@@ -55,11 +57,12 @@ const plainHeader = {
 export function RootNavigator() {
   const authStatus = useAppStore((s) => s.authStatus);
   const onboarded = useAppStore((s) => s.onboarded);
+  const { t } = useTranslation();
 
   if (authStatus === 'unknown') {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" accessibilityLabel={t('loading')} />
       </View>
     );
   }
@@ -69,9 +72,9 @@ export function RootNavigator() {
       {authStatus === 'signedOut' ? (
         <Stack.Group>
           <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} options={{ title: 'Forgot password' }} />
-          <Stack.Screen name="Activate" component={SetPasswordScreen} options={{ title: 'Activate account' }} />
-          <Stack.Screen name="ResetPassword" component={SetPasswordScreen} options={{ title: 'Reset password' }} />
+          <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} options={{ title: t('screens.forgotPassword') }} />
+          <Stack.Screen name="Activate" component={SetPasswordScreen} options={{ title: t('screens.activate') }} />
+          <Stack.Screen name="ResetPassword" component={SetPasswordScreen} options={{ title: t('screens.resetPassword') }} />
         </Stack.Group>
       ) : !onboarded ? (
         <Stack.Group>
@@ -81,10 +84,10 @@ export function RootNavigator() {
       ) : (
         <Stack.Group>
           <Stack.Screen name="Main" component={MainTabs} options={{ headerShown: false }} />
-          <Stack.Screen name="LocationMap" component={LocationMapScreen} options={{ title: 'Location', headerShown: false }} />
-          <Stack.Screen name="Correction" component={CorrectionScreen} options={{ title: 'Request a correction' }} />
+          <Stack.Screen name="LocationMap" component={LocationMapScreen} options={{ title: t('screens.location'), headerShown: false }} />
+          <Stack.Screen name="Correction" component={CorrectionScreen} options={{ title: t('screens.correction') }} />
           <Stack.Screen name="Permissions" component={PermissionSetupScreen} options={{ title: '' }} />
-          <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Settings' }} />
+          <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: t('screens.settings') }} />
         </Stack.Group>
       )}
     </Stack.Navigator>

@@ -1,5 +1,6 @@
 import { type RouteProp, useFocusEffect, useRoute } from '@react-navigation/native';
 import React, { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { AppState, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -33,7 +34,8 @@ interface StepProps {
 }
 
 /** Numbered permission card (mockup page 2). */
-function Step({ n, title, body, ok, okLabel = 'Allowed', missingLabel = 'Needed', action }: StepProps) {
+function Step({ n, title, body, ok, okLabel, missingLabel, action }: StepProps) {
+  const { t } = useTranslation('onboarding');
   return (
     <View style={styles.step}>
       <View style={styles.num}>
@@ -42,7 +44,7 @@ function Step({ n, title, body, ok, okLabel = 'Allowed', missingLabel = 'Needed'
       <View style={{ flex: 1, gap: 6 }}>
         <View style={styles.stepHead}>
           <Text style={styles.stepTitle}>{title}</Text>
-          {ok == null ? null : <Pill tone={ok ? 'green' : 'amber'}>{ok ? okLabel : missingLabel}</Pill>}
+          {ok == null ? null : <Pill tone={ok ? 'green' : 'amber'}>{ok ? (okLabel ?? t('permissions.allowed')) : (missingLabel ?? t('permissions.needed'))}</Pill>}
         </View>
         <Text style={styles.stepBody}>{body}</Text>
         {!ok && action ? (
@@ -67,6 +69,7 @@ export function PermissionSetupScreen() {
   const graceSec = useAppStore((s) => s.dashboard?.config?.gracePeriodSec ?? 300);
   const [p, setP] = useState<PermissionSnapshot | null>(null);
   const [busy, setBusy] = useState(false);
+  const { t } = useTranslation('onboarding');
 
   const reload = useCallback(async () => {
     setP(await checkPermissions());
@@ -106,78 +109,100 @@ export function PermissionSetupScreen() {
 
   let warning: string | null = null;
   if (p && !allOk) {
-    if (!p.notifications) warning = 'Notifications must be allowed.';
-    else if (!preciseOk) warning = 'Precise location must be allowed.';
-    else if (!p.backgroundLocation) warning = 'Background location must be set to “Allow all the time”.';
-    else if (!p.locationServices) warning = 'Location must be turned on for this phone.';
+    if (!p.notifications) warning = t('permissions.warning.notifications');
+    else if (!preciseOk) warning = t('permissions.warning.precise');
+    else if (!p.backgroundLocation) warning = t('permissions.warning.background');
+    else if (!p.locationServices) warning = t('permissions.warning.services');
   }
 
   return (
     <ScrollView style={{ backgroundColor: palette.background }} contentContainerStyle={[styles.container, { paddingBottom: insets.bottom + 24 }]}>
       <ScreenTitle
-        kicker={fromOnboarding ? 'Step 2 of 2' : undefined}
-        title="Turn on attendance monitoring"
-        subtitle={`The app asks you to check in when you enter the faculty area and to check out when you leave. If you don't respond within ${minutes} minutes, it checks your location again before recording automatically.`}
+        kicker={fromOnboarding ? t('permissions.kicker') : undefined}
+        title={t('permissions.title')}
+        subtitle={t('permissions.subtitle', { count: minutes })}
       />
 
       <Step
         n="01"
-        title="Notifications"
-        body="Shows check-in and check-out requests."
+        title={t('permissions.notifications.title')}
+        body={t('permissions.notifications.body')}
         ok={p ? p.notifications : null}
-        action={{ label: 'Allow', onPress: () => void step(requestNotificationPermission) }}
+        action={{ label: t('permissions.allow'), onPress: () => void step(requestNotificationPermission) }}
       />
       <Step
         n="02"
-        title="Precise location"
-        body={fgOk && !preciseOk ? 'Only approximate location is allowed, so every reading would be “Uncertain”. Choose “Precise” in Settings.' : 'Needed to tell whether you are inside the attendance area.'}
+        title={t('permissions.precise.title')}
+        body={fgOk && !preciseOk ? t('permissions.precise.approximateBody') : t('permissions.precise.body')}
         ok={p ? preciseOk : null}
-        action={fgOk ? { label: 'Open settings', onPress: () => void openAppSettings() } : { label: 'Allow', onPress: () => void step(requestForegroundLocation) }}
+        action={
+          fgOk
+            ? { label: t('permissions.openSettings'), onPress: () => void openAppSettings() }
+            : { label: t('permissions.allow'), onPress: () => void step(requestForegroundLocation) }
+        }
       />
       <Step
         n="03"
-        title="Background location"
-        body="Detects entry and exit while the app is closed. Choose “Allow all the time”."
+        title={t('permissions.background.title')}
+        body={t('permissions.background.body')}
         ok={p ? p.backgroundLocation : null}
-        action={fgOk ? { label: 'Open settings', onPress: () => void step(requestBackgroundLocation) } : undefined}
+        action={fgOk ? { label: t('permissions.openSettings'), onPress: () => void step(requestBackgroundLocation) } : undefined}
       />
       {p && !p.locationServices ? (
-        <Step n="04" title="Location services" body="Location is turned off on this phone." ok={false} missingLabel="Off" action={{ label: 'Open settings', onPress: () => void openAppSettings() }} />
+        <Step
+          n="04"
+          title={t('permissions.services.title')}
+          body={t('permissions.services.body')}
+          ok={false}
+          missingLabel={t('permissions.off')}
+          action={{ label: t('permissions.openSettings'), onPress: () => void openAppSettings() }}
+        />
       ) : null}
       <Step
         n={p && !p.locationServices ? '05' : '04'}
-        title="Battery optimisation"
-        body="Some phones (Xiaomi, Oppo, Samsung…) stop background work. Set this app to “Unrestricted” so detection and the automatic check run on time."
+        title={t('permissions.battery.title')}
+        body={t('permissions.battery.body')}
         ok={false}
-        missingLabel="Recommended"
-        action={{ label: 'Open settings', onPress: () => void openBatteryOptimisationSettings() }}
+        missingLabel={t('permissions.recommended')}
+        action={{ label: t('permissions.openSettings'), onPress: () => void openBatteryOptimisationSettings() }}
       />
 
       {warning ? (
         <Notice tone="amber">
-          Monitoring is <Text style={{ fontWeight: '800', color: '#9A3412' }}>not active</Text> yet. {warning}
+          {t('permissions.notActive')
+            .split(/<b>(.*?)<\/b>/)
+            .map((part, i) =>
+              i % 2 === 1 ? (
+                <Text key={i} style={{ fontWeight: '800', color: '#9A3412' }}>
+                  {part}
+                </Text>
+              ) : (
+                part
+              ),
+            )}{' '}
+          {warning}
         </Notice>
       ) : null}
       {!isSchedulerAvailable ? (
-        <Notice tone="red">The background scheduler is not part of this build, so automatic attendance after the grace period is unavailable.</Notice>
+        <Notice tone="red">{t('permissions.noScheduler')}</Notice>
       ) : null}
 
       {fromOnboarding ? (
         <View style={{ gap: 12, marginTop: 8 }}>
           <BigButton onPress={() => void finish()} disabled={!allOk} busy={busy}>
-            Start monitoring
+            {t('permissions.start')}
           </BigButton>
           {!allOk ? (
             <Pressable onPress={() => void finish()} accessibilityRole="button" style={{ alignSelf: 'center' }} hitSlop={8}>
-              <Text style={styles.skip}>Continue with limited monitoring</Text>
+              <Text style={styles.skip}>{t('permissions.continueLimited')}</Text>
             </Pressable>
           ) : null}
         </View>
       ) : monitoring?.active ? (
-        <Pill tone="green">Monitoring active</Pill>
+        <Pill tone="green">{t('permissions.monitoringActive')}</Pill>
       ) : null}
 
-      <Text style={styles.footer}>Your location is checked only for attendance. No travel history is stored.</Text>
+      <Text style={styles.footer}>{t('permissions.footer')}</Text>
     </ScrollView>
   );
 }

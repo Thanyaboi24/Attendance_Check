@@ -11,10 +11,22 @@ export const CONFIG_V1: GeofenceConfig = {
   centerLat: 14.0693,
   centerLng: 100.6035,
   radiusM: 150,
+  zones: [{ name: 'SIIT Rangsit', centerLat: 14.0693, centerLng: 100.6035, radiusM: 150 }],
   gracePeriodSec: 300,
   maxLocationAgeSec: 60,
   maxAccuracyM: 30,
   effectiveAt: '2026-01-01T00:00:00.000Z',
+};
+
+/** Rangsit + Bangkadi campuses (seed v1 after the Bangkadi campus was added). */
+export const CONFIG_TWO_CAMPUSES: GeofenceConfig = {
+  ...CONFIG_V1,
+  version: 2,
+  name: 'SIIT campuses',
+  zones: [
+    { name: 'SIIT Rangsit campus', centerLat: 14.0693, centerLng: 100.6035, radiusM: 150 },
+    { name: 'SIIT Bangkadi campus', centerLat: 13.980481, centerLng: 100.55487, radiusM: 150 },
+  ],
 };
 
 export const T0 = new Date('2026-11-03T01:00:00.000Z'); // 08:00 Bangkok
@@ -45,7 +57,11 @@ export class FakeClock {
   }
 }
 
-export type FixSpec = { distanceM: number; accuracyM?: number | null; ageSec?: number; isMock?: boolean } | Error;
+export type FixSpec =
+  | { distanceM: number; accuracyM?: number | null; ageSec?: number; isMock?: boolean; at?: undefined }
+  /** An exact position (e.g. another campus) instead of a distance north of the first area's centre. */
+  | { at: { lat: number; lng: number }; accuracyM?: number | null; ageSec?: number; isMock?: boolean; distanceM?: undefined }
+  | Error;
 
 /** Returns fixes from a script; each fix is measured "now" (minus ageSec) at `distanceM` north of the centre. */
 export class FakeLocation {
@@ -70,8 +86,8 @@ export class FakeLocation {
     if (!spec) throw new LocationUnavailableError('TIMEOUT', 'no scripted fix');
     if (spec instanceof Error) throw spec;
     return {
-      lat: this.cfg.centerLat + spec.distanceM / M_PER_DEG_LAT,
-      lng: this.cfg.centerLng,
+      lat: spec.at ? spec.at.lat : this.cfg.centerLat + spec.distanceM / M_PER_DEG_LAT,
+      lng: spec.at ? spec.at.lng : this.cfg.centerLng,
       accuracyM: spec.accuracyM === undefined ? 10 : spec.accuracyM,
       measuredAt: new Date(this.clock.t - (spec.ageSec ?? 0) * 1000).toISOString(),
       isMock: spec.isMock ?? false,

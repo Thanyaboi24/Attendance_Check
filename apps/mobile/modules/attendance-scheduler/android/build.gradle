@@ -1,0 +1,25 @@
+// Expo local module (autolinked from apps/mobile/modules). Same layout as `expo-module-template@58`.
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'th.ac.siit.attendance.scheduler'
+version = '1.0.0'
+
+android {
+  namespace "th.ac.siit.attendance.scheduler"
+  defaultConfig {
+    versionCode 1
+    versionName "1.0.0"
+  }
+  lintOptions {
+    abortOnError false
+  }
+}
+
+dependencies {
+  implementation 'com.facebook.react:react-android'
+  implementation 'androidx.work:work-runtime-ktx:2.10.1'
+  implementation 'androidx.core:core-ktx:1.13.1'
+}

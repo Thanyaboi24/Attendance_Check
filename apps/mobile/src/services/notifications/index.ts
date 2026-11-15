@@ -1,6 +1,7 @@
-import { NOTIFICATION_TEXT, RequestType } from '@attendance/shared';
+import { RequestType } from '@attendance/shared';
 import * as Notifications from 'expo-notifications';
 import type { Notifier, PresentResult } from '../../domain/ports';
+import { i18n, restoreSavedLanguage, t } from '../../i18n';
 
 /** Android channels (design §7.5). `location_check` is also used by the native foreground service. */
 export const CHANNEL_REQUESTS = 'attendance_requests';
@@ -22,6 +23,38 @@ export interface AttendanceNotificationData {
 
 let setupDone: Promise<void> | null = null;
 
+/**
+ * Channel names and action-button titles in the current language. Android keeps channels and categories by id, so
+ * calling this again (after a language change) renames them in place.
+ */
+async function registerChannelsAndCategories(): Promise<void> {
+  await Notifications.setNotificationChannelAsync(CHANNEL_REQUESTS, {
+    name: t('notifications:channels.requests.name'),
+    description: t('notifications:channels.requests.description'),
+    importance: Notifications.AndroidImportance.HIGH,
+  });
+  await Notifications.setNotificationChannelAsync(CHANNEL_RESULTS, {
+    name: t('notifications:channels.results.name'),
+    importance: Notifications.AndroidImportance.DEFAULT,
+  });
+  await Notifications.setNotificationChannelAsync(CHANNEL_LOCATION_CHECK, {
+    name: t('notifications:channels.locationCheck.name'),
+    description: t('notifications:channels.locationCheck.description'),
+    importance: Notifications.AndroidImportance.LOW,
+  });
+  // Check In / Check Out open the app (fresh foreground fix, result visible — ADR-9). Dismiss does NOT cancel.
+  await Notifications.setNotificationCategoryAsync(CATEGORY_CHECK_IN, [
+    { identifier: ACTION_CHECK_IN, buttonTitle: t('notifications:actions.checkIn'), options: { opensAppToForeground: true } },
+    { identifier: ACTION_DISMISS, buttonTitle: t('notifications:actions.dismiss'), options: { opensAppToForeground: false } },
+  ]);
+  await Notifications.setNotificationCategoryAsync(CATEGORY_CHECK_OUT, [
+    { identifier: ACTION_CHECK_OUT, buttonTitle: t('notifications:actions.checkOut'), options: { opensAppToForeground: true } },
+    { identifier: ACTION_DISMISS, buttonTitle: t('notifications:actions.dismiss'), options: { opensAppToForeground: false } },
+  ]);
+}
+
+let languageListener = false;
+
 /** Channels + categories + foreground presentation. Idempotent; safe to call from headless tasks. */
 export function setupNotifications(): Promise<void> {
   if (!setupDone) {
@@ -34,29 +67,15 @@ export function setupNotifications(): Promise<void> {
           shouldSetBadge: false,
         }),
       });
-      await Notifications.setNotificationChannelAsync(CHANNEL_REQUESTS, {
-        name: 'Attendance confirmation',
-        description: 'Check-in / check-out confirmation requests',
-        importance: Notifications.AndroidImportance.HIGH,
-      });
-      await Notifications.setNotificationChannelAsync(CHANNEL_RESULTS, {
-        name: 'Attendance results',
-        importance: Notifications.AndroidImportance.DEFAULT,
-      });
-      await Notifications.setNotificationChannelAsync(CHANNEL_LOCATION_CHECK, {
-        name: 'Location check',
-        description: 'Shown while the app verifies your location in the background',
-        importance: Notifications.AndroidImportance.LOW,
-      });
-      // Check In / Check Out open the app (fresh foreground fix, result visible — ADR-9). Dismiss does NOT cancel.
-      await Notifications.setNotificationCategoryAsync(CATEGORY_CHECK_IN, [
-        { identifier: ACTION_CHECK_IN, buttonTitle: 'Check In', options: { opensAppToForeground: true } },
-        { identifier: ACTION_DISMISS, buttonTitle: 'Dismiss', options: { opensAppToForeground: false } },
-      ]);
-      await Notifications.setNotificationCategoryAsync(CATEGORY_CHECK_OUT, [
-        { identifier: ACTION_CHECK_OUT, buttonTitle: 'Check Out', options: { opensAppToForeground: true } },
-        { identifier: ACTION_DISMISS, buttonTitle: 'Dismiss', options: { opensAppToForeground: false } },
-      ]);
+      // Headless tasks may run before the entry point finished restoring the saved language.
+      await restoreSavedLanguage();
+      await registerChannelsAndCategories();
+      if (!languageListener) {
+        languageListener = true;
+        i18n.on('languageChanged', () => {
+          registerChannelsAndCategories().catch(() => undefined);
+        });
+      }
     })().catch((e: unknown) => {
       setupDone = null;
       throw e;
@@ -71,14 +90,18 @@ export const expoNotifier: Notifier = {
       await setupNotifications();
       const perm = await Notifications.getPermissionsAsync();
       if (!perm.granted) return { status: 'FAILED', error: 'Notification permission not granted' };
-      const text = type === RequestType.CHECK_IN ? NOTIFICATION_TEXT.CHECK_IN : NOTIFICATION_TEXT.CHECK_OUT;
       const minutes = Math.max(1, Math.round(graceSec / 60));
+      // Same wording as NOTIFICATION_TEXT (packages/shared), in the language saved in Settings.
+      const text =
+        type === RequestType.CHECK_IN
+          ? { title: t('notifications:request.checkIn.title'), body: t('notifications:request.checkIn.body', { minutes }) }
+          : { title: t('notifications:request.checkOut.title'), body: t('notifications:request.checkOut.body', { minutes }) };
       const data: AttendanceNotificationData = { requestId, requestType: type, kind: 'ATTENDANCE_REQUEST' };
       await Notifications.scheduleNotificationAsync({
         identifier: requestId,
         content: {
           title: text.title,
-          body: text.body.replace('{minutes}', String(minutes)),
+          body: text.body,
           data,
           categoryIdentifier: type === RequestType.CHECK_IN ? CATEGORY_CHECK_IN : CATEGORY_CHECK_OUT,
           sticky: false,

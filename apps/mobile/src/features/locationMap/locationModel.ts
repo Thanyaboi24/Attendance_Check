@@ -1,32 +1,43 @@
-import { formatBangkokTime, type GeofenceConfig, type LocationClass, RequestType } from '@attendance/shared';
+import { formatBangkokTime, type GeofenceConfig, type GeofenceZone, type LocationClass, RequestType, zonesOf } from '@attendance/shared';
+import { t } from '../../i18n';
 
-/** Mockup page 5 sheet title and page 3/4 badge text for each location class. */
-export const LOCATION_TITLE: Record<LocationClass, string> = {
-  CONFIRMED_INSIDE: 'Confirmed inside',
-  CONFIRMED_OUTSIDE: 'Outside the area',
-  UNCERTAIN: 'Location uncertain',
-};
+/** Mockup page 5 sheet title for each location class (current language). */
+export function locationTitle(cls: LocationClass): string {
+  return t(`location:title.${cls}`);
+}
 
-export const LOCATION_SHORT: Record<LocationClass, string> = {
-  CONFIRMED_INSIDE: 'Inside',
-  CONFIRMED_OUTSIDE: 'Outside',
-  UNCERTAIN: 'Uncertain',
-};
+/** Page 3/4 badge text for each location class (current language). */
+export function locationShort(cls: LocationClass): string {
+  return t(`location:short.${cls}`);
+}
 
 export interface FixLike {
   accuracyM: number | null;
   distanceM: number | null;
   classification: LocationClass;
   measuredAt: string;
+  /** Area the fix was matched to when the configuration has several (campuses). */
+  zone?: string;
+}
+
+/** "SIIT Bangkadi campus" → "Bangkadi", for tight one-line labels. */
+export function shortArea(name: string): string {
+  return name.replace(/^SIIT\s+/i, '').replace(/\s+campus$/i, '').trim() || name;
+}
+
+/** The area a fix refers to: the one named by the classification, else the first (or only) area. */
+export function zoneForFix(cfg: GeofenceConfig, fix: Pick<FixLike, 'zone'> | null): GeofenceZone {
+  const zones = zonesOf(cfg);
+  return zones.find((z) => z.name === fix?.zone) ?? zones[0]!;
 }
 
 /** "Updated 2 min ago" (page 3). Coarse on purpose: the reading is display-only. */
 export function relativeAge(iso: string, now: Date): string {
   const sec = Math.max(0, Math.round((now.getTime() - Date.parse(iso)) / 1000));
-  if (sec < 45) return 'just now';
+  if (sec < 45) return t('location:age.justNow');
   const min = Math.round(sec / 60);
-  if (min < 60) return `${min} min ago`;
-  return `at ${formatBangkokTime(iso)}`;
+  if (min < 60) return t('location:age.minutes', { min: String(min) });
+  return t('location:age.at', { time: formatBangkokTime(iso) });
 }
 
 /** "08:44:10" in Asia/Bangkok (fixed UTC+7, no DST), for the map footer. */
@@ -35,16 +46,24 @@ export function bangkokClock(iso: string): string {
 }
 
 /** Sentence under the badge (page 4): distance, accuracy and what it means relative to the boundary. */
-export function describeFix(fix: FixLike, radiusM: number): string {
-  const d = fix.distanceM != null ? `${Math.round(fix.distanceM)} m from centre` : 'Distance unknown';
-  const acc = fix.accuracyM != null ? `, accuracy ±${Math.round(fix.accuracyM)} m` : '';
+export function describeFix(fix: FixLike, radiusM: number, areaName?: string): string {
+  const distance = fix.distanceM != null ? String(Math.round(fix.distanceM)) : null;
+  const d =
+    distance == null
+      ? t('location:fix.distanceUnknown')
+      : areaName
+        ? t('location:fix.distanceArea', { distance, area: areaName })
+        : t('location:fix.distance', { distance });
+  const acc = fix.accuracyM != null ? t('location:fix.accuracy', { accuracy: String(Math.round(fix.accuracyM)) }) : '';
+  const reading = `${d}${acc}`;
+  const area = areaName ? t('location:fix.areaNamed', { area: areaName, radius: String(radiusM) }) : t('location:fix.area', { radius: String(radiusM) });
   switch (fix.classification) {
     case 'CONFIRMED_INSIDE':
-      return `${d}${acc}. You are inside the ${radiusM} m area.`;
+      return t('location:fix.inside', { reading, area });
     case 'CONFIRMED_OUTSIDE':
-      return `${d}${acc}. You are outside the ${radiusM} m area.`;
+      return areaName ? t('location:fix.outsideAll', { reading, area }) : t('location:fix.outside', { reading, area });
     case 'UNCERTAIN':
-      return `${d}${acc}. You are close to the edge of the ${radiusM} m area.`;
+      return t('location:fix.uncertain', { reading, area });
   }
 }
 
@@ -80,9 +99,7 @@ export function requiredClass(type: RequestType): LocationClass {
 export function autoRequirementNote(type: RequestType, cls: LocationClass | null): string | null {
   const need = requiredClass(type);
   if (cls === need) return null;
-  return type === RequestType.CHECK_IN
-    ? 'Automatic check-in needs a confirmed inside reading.'
-    : 'Automatic check-out needs a confirmed outside reading.';
+  return type === RequestType.CHECK_IN ? t('location:autoNeeds.CHECK_IN') : t('location:autoNeeds.CHECK_OUT');
 }
 
 export interface Countdown {

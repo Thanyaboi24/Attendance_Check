@@ -107,3 +107,45 @@ describe('classify (DS2 §2.6.4)', () => {
     expect(classify(reading(165, 10), wide, now).classification).toBe(LocationClass.CONFIRMED_INSIDE);
   });
 });
+
+describe('classify with several areas (campuses)', () => {
+  const two = {
+    name: 'SIIT campuses',
+    centerLat: 14.0693,
+    centerLng: 100.6035,
+    radiusM: 150,
+    zones: [
+      { name: 'Rangsit', centerLat: 14.0693, centerLng: 100.6035, radiusM: 150 },
+      { name: 'Bangkadi', centerLat: 13.980481, centerLng: 100.55487, radiusM: 150 },
+    ],
+    maxLocationAgeSec: 60,
+    maxAccuracyM: 30,
+  };
+  const now = new Date('2026-11-15T03:00:00.000Z');
+  const at = (lat: number, lng: number, accuracyM = 5) => ({ lat, lng, accuracyM, measuredAt: now.toISOString() });
+
+  it('is inside when inside either campus, and names the campus', () => {
+    expect(classify(at(14.0693, 100.6035), two, now)).toMatchObject({ classification: 'CONFIRMED_INSIDE', zone: 'Rangsit' });
+    const bkd = classify(at(13.9805, 100.5549), two, now);
+    expect(bkd).toMatchObject({ classification: 'CONFIRMED_INSIDE', zone: 'Bangkadi' });
+    expect(bkd.distanceM).toBeLessThan(10);
+  });
+
+  it('is outside only when outside every campus, reported against the nearest one', () => {
+    const c = classify(at(13.99, 100.56), two, now); // ~1.2 km from Bangkadi, ~11 km from Rangsit
+    expect(c).toMatchObject({ classification: 'CONFIRMED_OUTSIDE', zone: 'Bangkadi' });
+    expect(c.distanceM).toBeGreaterThan(1000);
+    expect(c.distanceM).toBeLessThan(1500);
+  });
+
+  it('is uncertain when the accuracy circle crosses a campus boundary', () => {
+    // 150 m north of the Bangkadi centre with ±20 m accuracy
+    const c = classify(at(13.980481 + 150 / 110_574, 100.55487, 20), two, now);
+    expect(c).toMatchObject({ classification: 'UNCERTAIN', uncertainReason: 'STRADDLES_BOUNDARY', zone: 'Bangkadi' });
+  });
+
+  it('omits the area name for single-area configurations', () => {
+    const one = { ...two, zones: [two.zones[0]!] };
+    expect(classify(at(14.0693, 100.6035), one, now)).not.toHaveProperty('zone');
+  });
+});

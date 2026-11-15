@@ -13,6 +13,7 @@ import {
   RequestType,
   type UnresolvedReasonInput,
 } from '@attendance/shared';
+import { t } from '../../i18n';
 import { errorMessage, isLocationError } from '../errors';
 import type { AppDeps } from '../ports';
 import {
@@ -262,29 +263,28 @@ async function notifyOutcome(
   reason?: UnresolvedReasonInput,
 ): Promise<void> {
   const req = await deps.store.getRequest(requestId);
-  const what = req?.type === RequestType.CHECK_OUT ? 'check-out' : 'check-in';
+  // Posted from the grace-period task: text in the language saved in Settings (src/i18n).
+  const what = req?.type === RequestType.CHECK_OUT ? 'checkOut' : 'checkIn';
   let title: string;
   let body: string;
   if (queued) {
-    title = 'Pending synchronization';
-    body = `Your automatic ${what} decision is saved on this phone and will be sent when the connection returns. It is not recorded yet.`;
+    title = t(`notifications:result.${what}.queuedTitle`);
+    body = t(`notifications:result.${what}.queuedBody`);
   } else if (result?.status === RequestStatus.APPROVED) {
-    title = `Automatic ${what} recorded`;
-    body = `Recorded at ${result.officialTime ? formatBangkokTime(result.officialTime) : '—'} (Bangkok time) after verifying your location again.`;
+    title = t(`notifications:result.${what}.recordedTitle`);
+    body = t(`notifications:result.${what}.recordedBody`, { time: result.officialTime ? formatBangkokTime(result.officialTime) : '—' });
   } else if (result?.status === RequestStatus.CANCELLED || action === 'CANCEL') {
-    title = `No ${what}`;
-    body = `Your location was confirmed on the other side of the attendance area, so no ${what} was recorded.`;
+    title = t(`notifications:result.${what}.cancelledTitle`);
+    body = t(`notifications:result.${what}.cancelledBody`);
   } else if (result?.status === RequestStatus.REJECTED) {
-    title = `${capitalise(what)} not recorded`;
-    body = `The server rejected the request (${result.reason ?? 'rejected'}). You can submit a correction request.`;
+    title = t(`notifications:result.${what}.rejectedTitle`);
+    body = t(`notifications:result.${what}.rejectedBody`, { reason: result.reason ?? t('notifications:result.rejectedFallback') });
   } else {
-    title = `${capitalise(what)} unresolved`;
+    title = t(`notifications:result.${what}.unresolvedTitle`);
     body =
       (result?.reason ?? reason) === 'NOTIFICATION_FAILED'
-        ? 'The confirmation notification could not be shown, so no automatic attendance was recorded. Open the app to check in/out manually.'
-        : 'Your location could not be verified, so nothing was recorded. Open the app to retry or submit a correction request.';
+        ? t('notifications:result.unresolvedNotification')
+        : t('notifications:result.unresolvedLocation');
   }
   await safe(() => deps.notifier.showInfo({ title, body, requestId }));
 }
-
-const capitalise = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);

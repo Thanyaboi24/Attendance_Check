@@ -1,89 +1,373 @@
 # Faculty Attendance: Staff Attendance Check Using Geofencing
 
-Senior Project BL1-2026, SIIT, Thammasat University.
-Design: [Android_Mobile_Architecture.md](Android_Mobile_Architecture.md) · API contract: [docs/API.md](docs/API.md)
+Senior Project BL1-2026, Sirindhorn International Institute of Technology (SIIT), Thammasat University.
 
-A staff member's Android phone detects entering or leaving the faculty geofence and asks them to confirm with a notification. If they don't answer within the grace period, the app takes a **fresh** location fix. It records attendance automatically only when that fix confirms the user is still inside (check-in) or still outside (check-out). The backend re-checks every decision and is the source of truth.
+Staff check in and out by arriving at and leaving campus with an Android phone. The app detects entering or leaving a campus geofence and sends a notification asking the staff member to confirm. If they don't answer within the grace period, the phone takes a **fresh** GPS fix. It records attendance automatically only when that fix confirms they are still inside (check-in) or still outside (check-out). The backend re-checks every decision and is the source of truth. Administrators review attendance, corrections and reports on a web dashboard.
 
-## Repository layout
+Both apps are available in **English and Thai (ภาษาไทย)**.
 
-| Path | What | Stack |
+- Design document: [Android_Mobile_Architecture.md](Android_Mobile_Architecture.md)
+- REST API contract: [docs/API.md](docs/API.md)
+- Translation rules and Thai glossary: [docs/i18n.md](docs/i18n.md)
+- Mobile app details: [apps/mobile/README.md](apps/mobile/README.md)
+
+---
+
+## Contents
+
+1. [Features](#features)
+2. [Tech stack](#tech-stack)
+3. [Architecture](#architecture)
+4. [Requirements](#requirements)
+5. [Getting started](#getting-started)
+6. [Configuration](#configuration)
+7. [Testing](#testing)
+8. [Project structure](#project-structure)
+9. [Technical details](#technical-details)
+10. [Troubleshooting](#troubleshooting)
+11. [Known limitations](#known-limitations)
+
+---
+
+## Features
+
+**Staff mobile app (Android)**
+- Automatic check-in/check-out from geofence enter/exit events, with a confirmation notification and a grace period
+- Fresh-location validation before anything is recorded: maximum reading age, accuracy limit and mock-location detection
+- Several attendance areas, such as SIIT Rangsit and SIIT Bangkadi; a staff member can check in at either campus
+- A live location map showing distance, accuracy and an inside, outside or uncertain status
+- Attendance history with date-range and method filters
+- Correction requests for missed or wrong records
+- Works offline: actions are queued in a local SQLite outbox and synced later with idempotent requests
+- Exportable evaluation log (CSV/JSON) for field testing
+- English and Thai, switchable in Settings, with Thai dates in the Buddhist Era year
+
+**Admin web dashboard**
+- Today's overview, attendance sessions, attendance requests and their location evidence on a map
+- Correction review (approve/reject with a note)
+- User management: create users, activation emails, lock/unlock and roles
+- Geofence configuration with versions and up to 10 areas, each with its own centre and radius; every change needs a reason and is audited
+- CSV reports and an append-only audit log
+- Two roles: **Attendance Admin** and **System Admin**
+- English and Thai, switchable in the sidebar and on the sign-in page
+
+**Backend API**
+- JWT access tokens, rotating refresh tokens, argon2id password hashing, account lockout and role-based access control
+- Server-side re-validation of every attendance decision
+- Database constraints: one open session per user, one active request per user, CHECK constraints and an append-only audit log
+- Idempotency keys and row locks, so retries never create duplicate records
+- Scheduled jobs for expiring requests and evidence retention
+- Swagger/OpenAPI documentation
+
+---
+
+## Tech stack
+
+| Layer | Technology |
+|---|---|
+| Monorepo | pnpm workspaces, Turborepo, TypeScript (strict) |
+| Shared domain (`packages/shared`) | TypeScript, zod 4 schemas, tsup, Vitest |
+| Backend (`apps/api`) | Node.js 22+, NestJS 11, Prisma 6, PostgreSQL 16, argon2, Nodemailer, @nestjs/schedule, Swagger, Jest + Supertest |
+| Admin web (`apps/admin-web`) | React 19, Vite 7, React Router 7, TanStack Query 5, React Hook Form + zod, Google Maps JS API (`@vis.gl/react-google-maps`) with an SVG fallback, i18next, Vitest + Testing Library |
+| Mobile (`apps/mobile`) | React Native 0.88, Expo SDK 58 (development build, New Architecture/Hermes), expo-location, expo-task-manager, expo-notifications, expo-sqlite, expo-secure-store, react-native-maps, React Native Paper, React Navigation 7, zustand, axios, i18next, Jest (jest-expo) |
+| Native Android | Local Expo module in Kotlin (`modules/attendance-scheduler`): WorkManager, a Headless JS service and a boot receiver |
+| Dev infrastructure | Docker Compose (PostgreSQL and Mailpit); embedded PostgreSQL if Docker isn't available |
+
+---
+
+## Architecture
+
+```
+┌──────────────────────┐        HTTPS / JSON         ┌───────────────────────────┐
+│  Android app (Expo)  │ ──────────────────────────▶ │  NestJS API  /api/v1      │
+│  geofence + GPS      │   JWT, Idempotency-Key      │  auth · attendance ·      │
+│  SQLite outbox       │ ◀────────────────────────── │  corrections · admin ·    │
+│  WorkManager jobs    │                             │  reports · audit · jobs   │
+└──────────────────────┘                             └─────────────┬─────────────┘
+                                                                   │ Prisma
+┌──────────────────────┐        HTTPS / JSON                       ▼
+│  Admin web (React)   │ ──────────────────────────▶      ┌─────────────────┐
+│  dashboard · maps    │                                  │  PostgreSQL 16  │
+└──────────────────────┘                                  └─────────────────┘
+
+        All three use @attendance/shared: location classifier, decision engine,
+        zod API schemas and Asia/Bangkok time helpers (one implementation, no drift).
+```
+
+**Attendance flow (check-in example)**
+1. The phone registers one geofence region per campus area from the current configuration.
+2. Android reports **ENTER**. The app creates a pending check-in request, sends it to the API (or queues it offline) and posts a notification.
+3. If the staff member taps **Check in**, the phone takes a fresh fix and sends it. The API approves the check-in if the fix is inside, fresh and not a mock location.
+4. If they don't answer, a WorkManager job wakes the app when the grace period ends. It takes a fresh fix and auto-confirms only if the fix is **confirmed inside**.
+   - If the fix is uncertain, it retries.
+   - If the phone has left the area, the request is cancelled.
+5. The server re-classifies the evidence and records the session; the server's decision is final.
+
+---
+
+## Requirements
+
+| Tool | Version | Needed for |
 |---|---|---|
-| `packages/shared` | Location classifier, decision engine, zod API schemas, Asia/Bangkok time helpers, shared by all apps | TypeScript, zod 4, tsup, Vitest |
-| `apps/api` | Backend: auth, RBAC, attendance processing, corrections, reports, audit, scheduled jobs | Node 22+, NestJS 11, PostgreSQL 16, Prisma 6, Jest |
-| `apps/admin-web` | Administrator dashboard (Attendance Admin / System Admin) | React 19, Vite 7, TanStack Query, Google Maps JS API |
-| `apps/mobile` | Staff Android app | React Native + Expo dev build, Kotlin WorkManager module |
-| `docs/API.md` | REST contract (status codes, idempotency, result semantics) | |
+| [Node.js](https://nodejs.org/) | **22 or newer** (tested on 24) | everything |
+| [pnpm](https://pnpm.io/installation) | **10 or newer** (repo pins 12.15) | everything: `corepack enable` or `npm i -g pnpm` |
+| Git | any recent | cloning |
+| PostgreSQL 16 | via Docker **or** the embedded one (`pnpm --filter api db:local`) | API |
+| Docker Desktop | optional | Postgres and Mailpit containers |
+| [Android Studio](https://developer.android.com/studio) | recent, with **Android SDK 36**, platform tools, an emulator image **with Google Play**, and **CMake 3.31.x** (on Windows) | mobile app |
+| JDK | **17** (bundled with Android Studio) | mobile app |
+| Google Maps API keys | optional | real map tiles; without keys both apps show a built-in fallback |
 
-## Quick start (development)
+The mobile app needs Android 8.0 (API 26) or newer. It is an Expo **development build**, so it doesn't run in Expo Go.
 
-Requirements: Node ≥ 22, pnpm ≥ 10. Docker is optional.
+---
+
+## Getting started
+
+### 1. Clone and install
 
 ```bash
+git clone https://github.com/biggasoftware/Attendance_Check.git
+cd Attendance_Check
 pnpm install
 pnpm --filter @attendance/shared build
-
-# 1. Database: either Docker…
-docker compose up -d postgres mailpit          # Postgres :5432, Mailpit UI http://localhost:8025
-# …or without Docker (embedded PostgreSQL, data kept in apps/api/.local-pg):
-pnpm --filter api db:local                     # Postgres :5433, keep this terminal open
-
-# 2. API (new terminal)
-cp apps/api/.env.example apps/api/.env         # set DATABASE_URL to :5433 if you used db:local; clear SMTP_HOST if Mailpit is not running
-pnpm --filter api db:migrate
-pnpm --filter api db:seed
-pnpm --filter api dev                          # http://localhost:3000/api/v1, Swagger at /api/v1/docs
-
-# 3. Admin web (new terminal)
-pnpm --filter admin-web dev                    # http://localhost:5173
-
-# 4. Mobile (needs Android SDK + emulator; Expo dev build, see apps/mobile/README.md)
-pnpm android                                   # from the repo root; or `cd apps/mobile && npx expo run:android`
 ```
 
-Seed accounts (development only):
+### 2. Start the database
 
-| Email | Password | Role | Uses |
-|---|---|---|---|
-| `staff@siit.tu.ac.th` | `Staff1234` | STAFF | mobile app |
-| `staff2@siit.tu.ac.th` | `Staff1234` | STAFF | mobile app |
-| `attendance.admin@siit.tu.ac.th` | `Admin1234` | ATTENDANCE_ADMIN | admin web |
-| `system.admin@siit.tu.ac.th` | `Admin1234` | SYSTEM_ADMIN | admin web |
+Choose **one** of the two options.
 
-Seed geofence v1: SIIT Rangsit, centre 14.0693, 100.6035, radius 150 m, grace period 300 s, max reading age 60 s, max accuracy 30 m.
+**Option A: Docker**
+```bash
+pnpm db:up            # PostgreSQL on :5432, Mailpit (catches emails) at http://localhost:8025
+```
 
-## Commands
+**Option B: no Docker (embedded PostgreSQL)**
+```bash
+pnpm --filter api db:local    # PostgreSQL on :5433, data in apps/api/.local-pg. Keep this terminal open.
+```
+
+### 3. Configure and start the API (new terminal)
 
 ```bash
-pnpm test                      # all packages (turbo)
-pnpm typecheck
-pnpm build
-pnpm --filter api test         # e2e on a real PostgreSQL (embedded automatically, or TEST_DATABASE_URL)
+cp apps/api/.env.example apps/api/.env
 ```
 
-## Roadmap status (design §15)
+If you used option B, edit `apps/api/.env`:
+- change `DATABASE_URL` to port `5433`
+- set `SMTP_HOST=` to empty (emails are then printed in the API log)
 
-| Phase | Deliverable | Where |
+Then migrate, seed and start the API:
+```bash
+pnpm --filter api db:migrate
+pnpm --filter api db:seed
+pnpm --filter api dev
+```
+
+- API: http://localhost:3000/api/v1
+- Swagger docs: http://localhost:3000/api/v1/docs
+
+### 4. Start the admin web (new terminal)
+
+```bash
+pnpm --filter admin-web dev   # http://localhost:5173 (proxies /api to :3000)
+```
+
+### 5. Run the Android app (new terminal)
+
+Start an Android emulator from Android Studio's Device Manager first. Then, from the repo root:
+
+```bash
+pnpm android
+```
+
+This builds the native app, installs it on the emulator and starts Metro. After the first build you only need Metro:
+
+```bash
+pnpm mobile:start             # then open the app on the emulator
+```
+
+The emulator reaches the API on your computer at `http://10.0.2.2:3000/api/v1` (the default). For a real phone on the same Wi-Fi, set `EXPO_PUBLIC_API_URL` (see [Configuration](#configuration)).
+
+### Seed accounts (development only)
+
+| Email | Password | Role | Use in |
+|---|---|---|---|
+| `staff@siit.tu.ac.th` | `Staff1234` | Staff | mobile app |
+| `staff2@siit.tu.ac.th` | `Staff1234` | Staff | mobile app |
+| `attendance.admin@siit.tu.ac.th` | `Admin1234` | Attendance Admin | admin web |
+| `system.admin@siit.tu.ac.th` | `Admin1234` | System Admin | admin web |
+
+The seed creates geofence v1 "SIIT campuses" with two areas, each with a radius of 150 m:
+
+| Area | Centre |
+|---|---|
+| SIIT Rangsit campus | 14.0693, 100.6035 |
+| SIIT Bangkadi campus | 13.980481, 100.554870 |
+
+The other seeded values: grace period 300 s, maximum reading age 60 s, maximum accuracy 30 m.
+
+### Root commands
+
+```bash
+pnpm build          # build all packages (turbo)
+pnpm typecheck      # typecheck all packages
+pnpm test           # run all test suites
+pnpm db:up / db:down  # Docker database and Mailpit
+```
+
+---
+
+## Configuration
+
+Copy each `.env.example` and fill it in. **Real `.env` and `.env.local` files are git-ignored; never commit secrets or API keys.**
+
+### `apps/api/.env`
+
+| Variable | Default | Purpose |
 |---|---|---|
-| 0 | Monorepo, shared package, NestJS skeleton, Docker Compose | root, `packages/shared`, `docker-compose.yml` |
-| 1 | Login, JWT + rotating refresh tokens, argon2id, lockout, RBAC, activation/reset links | `apps/api/src/auth`, `apps/mobile/src/features/auth`, `apps/admin-web` login pages |
-| 2 | Prisma schema + integrity migration (one open session, one active request, CHECK constraints, append-only audit), state machine | `apps/api/prisma`, `packages/shared/src/domain` |
-| 3 | Staff dashboard/history; admin dashboard, sessions, requests | mobile + admin web |
-| 4 | Fresh location, flat-earth classifier, map screens | `packages/shared` classifier, mobile `locationMap`, admin maps |
-| 5 | Manual attendance | `POST /attendance/requests/{id}/confirm`, mobile confirm flow |
-| 6 | Geofence registration, notifications, pending requests | mobile `services/location`, `services/notifications` |
-| 7 | Automatic attendance with fresh validation | mobile `modules/attendance-scheduler` (WorkManager) + `GracePeriodTask`; `POST …/auto` |
-| 8 | Duplicate prevention & failure handling | request-id idempotency + row locks (API), mobile outbox/sync |
-| 9 | Correction requests & audit | `/corrections`, `/admin/corrections`, audit log, admin UI |
-| 10 | Field-testing support | mobile event-log export, `GET /admin/reports/evaluation.csv` |
+| `DATABASE_URL` | `postgresql://attendance:attendance@localhost:5432/attendance` | PostgreSQL connection |
+| `JWT_SECRET` | dev value | **at least 32 random characters in production** |
+| `JWT_ACCESS_TTL_SEC` / `REFRESH_TOKEN_TTL_DAYS` | `900` / `30` | token lifetimes |
+| `CORS_ORIGINS` | `http://localhost:5173` | admin web origin(s), comma separated |
+| `APP_LINK_BASE` | `http://localhost:5173` | base URL for activation and reset links in emails |
+| `SMTP_HOST` / `SMTP_PORT` / `MAIL_FROM` | Mailpit | empty `SMTP_HOST` prints emails to the log instead |
+| `EVIDENCE_RETENTION_DAYS` | `365` | how long location evidence is kept |
+| `ENABLE_JOBS` | `true` | scheduled jobs |
+| `ALLOW_MOCK_LOCATION` | `false` | emulator GPS testing only; the API refuses to start with it in production |
 
-The DS2 §3.6 functional scenarios are covered by tests named after them, in `packages/shared/test` and `apps/api/test`, plus the mobile use-case tests. Scenario 15 (background/locked/killed phone) can only be measured in field tests on real devices.
+### `apps/admin-web/.env.local`
 
-## Notes and known limitations
+| Variable | Purpose |
+|---|---|
+| `VITE_API_URL` | API base URL; leave unset in development (Vite proxies `/api`) |
+| `VITE_GOOGLE_MAPS_API_KEY` | Maps JavaScript API key, restricted by HTTP referrer; empty uses the SVG map |
 
-- **Mobile native code is uncompiled.** No Android SDK was available while building, so `apps/mobile/modules/attendance-scheduler` (Kotlin: WorkManager, headless service, boot receiver) has never been compiled or run. The JS side typechecks, its 68 tests pass, and `expo export` bundles it. The first job on a machine with Android Studio is `pnpm android` from the repo root, or `npx expo run:android` inside `apps/mobile` (see `apps/mobile/README.md`).
-- **Android builds on Windows** need CMake 3.31.x (Android Studio → SDK Manager → SDK Tools → CMake). The default 3.22.1 includes an old `ninja` that fails with "Filename longer than 260 characters". Point the build at it in `apps/mobile/android/local.properties` with `sdk.dir=…/Android/Sdk` and `cmake.dir=…/Android/Sdk/cmake/3.31.6`. pnpm uses `nodeLinker: hoisted` for the same reason; keep admin-web's React version equal to the mobile app's so only one copy is hoisted.
-- **Emulator GPX testing:** Android may flag emulator fixes as mock locations, which the API rejects. For local testing only, set `ALLOW_MOCK_LOCATION=true` in `apps/api/.env`. The API refuses to start with it in production.
-- **Offline manual confirmation:** evidence must be fresh (≤ 60 s) by **server** time. A manual confirmation queued offline and synced later is therefore not approved (DS2 §2.10.1). The app falls back to a new fresh-fix evaluation or a correction request.
-- **Docker image** (`apps/api/Dockerfile`) has not been built here, because Docker was not available on the development machine.
-- Open issues from the design (§13) still apply: data retention period (`EVIDENCE_RETENTION_DAYS`), OEM background killers / Doze delays (measure in field tests), institutional SSO, iOS.
+### `apps/mobile/.env.local`
+
+| Variable | Purpose |
+|---|---|
+| `GOOGLE_MAPS_ANDROID_KEY` | Maps SDK for Android key, restricted to package `th.ac.siit.attendance` and your SHA-1. The key is compiled into the app, so after changing it run `npx expo prebuild --platform android` and rebuild. |
+| `EXPO_PUBLIC_API_URL` | API URL for a real phone, e.g. `http://192.168.1.20:3000/api/v1` |
+| `APP_VARIANT` | `production` forbids `http://` API URLs and cleartext traffic |
+
+---
+
+## Testing
+
+```bash
+pnpm test                          # everything
+pnpm --filter @attendance/shared test
+pnpm --filter api test             # e2e against a real PostgreSQL (embedded automatically, or TEST_DATABASE_URL)
+pnpm --filter admin-web test
+pnpm --filter mobile test          # Jest with fakes; no device needed
+```
+
+All 253 tests pass:
+
+| Package | Tests |
+|---|---|
+| shared | 56 |
+| api | 46 |
+| admin-web | 33 |
+| mobile | 118 |
+
+The functional scenarios in design DS2 §3.6 are covered by tests named after them.
+
+**Emulator walk-through:** import [`apps/mobile/testing/siit-boundary-crossing.gpx`](apps/mobile/testing/siit-boundary-crossing.gpx) in the emulator's Extended controls → Location → Routes. The route walks into the Rangsit geofence, stays, then walks out. It exercises the entry notification, the automatic check-in, the exit and the automatic check-out.
+- Set `ALLOW_MOCK_LOCATION=true` in `apps/api/.env`; otherwise the API rejects emulator locations as mock.
+- Grant the app location access **all the time**.
+
+---
+
+## Project structure
+
+```
+.
+├── packages/shared/          location classifier, decision engine, zod API schemas, time helpers
+├── apps/api/                 NestJS backend
+│   ├── prisma/               schema, migrations, seed
+│   ├── src/                  auth, users, attendance, corrections, geofence, admin, audit, jobs, mail
+│   └── test/                 e2e tests (real PostgreSQL)
+├── apps/admin-web/           React admin dashboard
+│   └── src/                  pages, components/map, api, auth, i18n (en, th)
+├── apps/mobile/              Expo / React Native Android app
+│   ├── src/domain/           pure use cases (geofence transition, auto attendance, sync, auth)
+│   ├── src/data/             API client, SQLite store and migrations, secure token storage
+│   ├── src/services/         location, notifications, scheduler, background tasks
+│   ├── src/features/         screens: auth, onboarding, dashboard, location map, history, correction, settings
+│   ├── src/i18n/             en and th resources, Thai date formatting
+│   ├── modules/attendance-scheduler/   Kotlin Expo module (WorkManager, headless service, boot receiver)
+│   └── __tests__/            Jest tests with in-memory fakes
+├── docs/                     API.md, i18n.md
+├── docker-compose.yml        PostgreSQL, Mailpit, optional API container
+└── Android_Mobile_Architecture.md   full design document
+```
+
+---
+
+## Technical details
+
+**Location classification** (`packages/shared/src/domain/locationClassifier.ts`)
+- For each area, with distance *d* to the centre, GPS accuracy *a* and radius *r*:
+  - **confirmed inside** if d + a ≤ r
+  - **confirmed outside** if d − a > r
+  - otherwise **uncertain**
+- With several areas, a fix is inside if it is inside any area, and outside only if it is outside every area.
+- Readings that are stale, too inaccurate or mocked are never accepted as evidence.
+
+**Trust model**
+- The phone proposes; the server decides.
+- The API re-classifies every piece of evidence against the configuration version the request was created under, and checks freshness against **server** time.
+
+**Reliability**
+- Every action carries a client-generated request ID and an `Idempotency-Key`, and the server takes row locks, so retries after a lost response don't duplicate records.
+- The mobile outbox replays in order, with exponential backoff.
+- Grace-period jobs survive app kills and reboots: WorkManager starts a Headless JS task, and a boot receiver re-schedules jobs.
+
+**Geofence versions**
+- Every configuration change creates a new version, with a mandatory reason and an audit entry.
+- The phone registers regions `faculty-v{n}` and `faculty-v{n}-z{k}`, so an event is always tied to the version it was created under.
+
+**Security**
+- argon2id passwords, short-lived JWTs and rotating refresh tokens (reuse revokes the token family), and lockout after failed sign-ins.
+- Helmet and a rate limiter on the API.
+- Tokens on the phone live in `expo-secure-store`; production builds are HTTPS-only.
+
+**Privacy**
+- The live map position never leaves the phone.
+- Only the evidence attached to a check-in/out is uploaded, and it is deleted after `EVIDENCE_RETENTION_DAYS`.
+
+**Time**
+- Everything is stored and sent as UTC ISO-8601 and displayed in Asia/Bangkok.
+- In Thai, dates use the Buddhist Era year (2026 → 2569).
+
+**Languages**
+- i18next with bundled resources; the English files are the contract, and a missing Thai key fails the typecheck. See [docs/i18n.md](docs/i18n.md).
+- The mobile app follows the phone language; the choice in Settings is stored locally so background notifications use it too.
+- The admin web follows the browser language and stores the choice in `localStorage`.
+
+---
+
+## Troubleshooting
+
+| Problem | Fix |
+|---|---|
+| `EADDRINUSE :::3000` | An old API process is still running. Stop it (`npx kill-port 3000`) and run `pnpm --filter api dev` again. |
+| Android build fails on Windows with *"Filename longer than 260 characters"* | Install **CMake 3.31.x** (Android Studio → SDK Manager → SDK Tools). Then put `sdk.dir=…/Android/Sdk` and `cmake.dir=…/Android/Sdk/cmake/3.31.6` in `apps/mobile/android/local.properties`. Re-add these after every `expo prebuild`, because prebuild regenerates `android/`. |
+| `Unable to resolve module …` or a blank screen in the app | Restart Metro with a clean cache: `cd apps/mobile && npx expo start --dev-client --clear` |
+| The map is blank or shows *Authorization failure* | The Google Maps key is missing, a demo key or wrongly restricted. Check the package name and SHA-1 (Android) or the referrer (web), and that the right Maps API is enabled. |
+| Emulator check-ins are rejected with `MOCK_LOCATION` | Set `ALLOW_MOCK_LOCATION=true` in `apps/api/.env` (development only). |
+| Geofence events arrive late on the emulator | Play Services batches location events. Open Google Maps on the emulator once, or wait a few minutes. |
+| Install problems with React versions | Keep admin-web's `react` version equal to the mobile app's (both `19.3.0`); `nodeLinker: hoisted` needs a single hoisted copy. |
+
+---
+
+## Known limitations
+
+- **Background behaviour on real devices** must be measured in field tests (DS2 scenario 15). This covers Doze, OEM battery killers and Headless JS start time. Turning off battery optimisation for the app helps.
+- **iOS is not supported.** The app targets Android only.
+- **Institutional single sign-on** is not integrated; accounts use email and password.
+- **A manual confirmation queued offline** may not be approved after it syncs, because evidence must be fresh by server time. The app then falls back to a new evaluation or a correction request.
+- **The API Docker image** (`apps/api/Dockerfile`) has not been built and tested.
+- **The data retention period** (`EVIDENCE_RETENTION_DAYS`) must be agreed with the institution before deployment.

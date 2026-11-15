@@ -54,13 +54,15 @@ export type TransitionOutcome =
   | { kind: 'PENDING_CANCELLED'; requestId: string; queued: boolean }
   | { kind: 'PENDING_KEPT'; requestId: string; classification: LocationClass | null };
 
-/** Parses `faculty-v3` → 3. */
+/** Parses `faculty-v3` or `faculty-v3-z2` (second area of version 3) → 3. */
 export function configVersionFromRegion(regionId: string | null | undefined): number | null {
-  const m = /-v(\d+)$/.exec(regionId ?? '');
+  const m = /-v(\d+)(?:-z\d+)?$/.exec(regionId ?? '');
   return m ? Number(m[1]) : null;
 }
 
-export const regionIdFor = (cfg: Pick<GeofenceConfig, 'version'>) => `faculty-v${cfg.version}`;
+/** Region id per area: `faculty-v3` for the first area (unchanged for single-area versions), `faculty-v3-z2` … for the rest. */
+export const regionIdFor = (cfg: Pick<GeofenceConfig, 'version'>, zoneIndex = 0) =>
+  zoneIndex === 0 ? `faculty-v${cfg.version}` : `faculty-v${cfg.version}-z${zoneIndex + 1}`;
 
 /**
  * GEOFENCE_TASK use case (design §7.2). A transition is only a *trigger*:

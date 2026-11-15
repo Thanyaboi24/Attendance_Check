@@ -1,0 +1,53 @@
+/** English UI text: user management. th/users.ts must have the same keys. */
+export default {
+  title: 'Users',
+  subtitle: 'Staff and administrator accounts.',
+  newUser: 'New user',
+  empty: 'No users match these filters.',
+  col: {
+    name: 'Name',
+    email: 'Email',
+    department: 'Department',
+    role: 'Role',
+    status: 'Status',
+    lastSignIn: 'Last sign-in',
+  },
+  actions: {
+    resendActivation: 'Resend activation',
+    activate: 'Activate',
+    deactivate: 'Deactivate',
+    resend: 'Resend',
+    cannotDeactivateSelf: 'You cannot deactivate your own account',
+  },
+  flash: {
+    statusChanged: '{{name}} is now {{status}}.',
+    activationResent: 'Activation email re-sent to {{email}}.',
+    created: 'Account created for {{name}}; an activation email was sent to {{email}}.',
+    saved: 'Saved changes to {{name}}.',
+  },
+  confirm: {
+    deactivateTitle: 'Deactivate account?',
+    activateTitle: 'Activate account?',
+    deactivateBody: '{{name}} will be signed out everywhere and can no longer sign in or record attendance.',
+    activateBody: '{{name}} will be able to sign in again.',
+    resendTitle: 'Resend activation email?',
+    resendBody: 'A new activation link (valid 24 hours) will be sent to {{email}}.',
+  },
+  form: {
+    newTitle: 'New user',
+    editTitle: 'Edit {{name}}',
+    create: 'Create and send activation email',
+    staffId: 'Staff ID',
+    email: 'Institutional email',
+    fullName: 'Full name',
+    department: 'Department',
+    role: 'Role',
+    emailAndStaffId: 'Email / staff ID',
+    cannotChangeOwnRole: 'You cannot change your own role.',
+  },
+  validation: {
+    staffId: 'Enter the staff ID',
+    fullName: 'Enter the full name',
+    department: 'Enter the department',
+  },
+} as const;

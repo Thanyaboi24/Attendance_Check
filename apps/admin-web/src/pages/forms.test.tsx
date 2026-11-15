@@ -124,6 +124,7 @@ const config: GeofenceConfig = {
   centerLat: 14.0693,
   centerLng: 100.6035,
   radiusM: 150,
+  zones: [{ name: 'SIIT Rangsit', centerLat: 14.0693, centerLng: 100.6035, radiusM: 150 }],
   gracePeriodSec: 300,
   maxLocationAgeSec: 60,
   maxAccuracyM: 30,
@@ -162,14 +163,55 @@ describe('Geofence form', () => {
     await waitFor(() => expect(onSaved).toHaveBeenCalled());
     expect(m.find('PUT', '/admin/geofence/config')[0]?.body).toEqual({
       name: 'SIIT Rangsit',
-      centerLat: 14.0693,
-      centerLng: 100.6035,
-      radiusM: 200,
+      zones: [{ name: 'SIIT Rangsit', centerLat: 14.0693, centerLng: 100.6035, radiusM: 200 }],
       gracePeriodSec: 300,
       maxLocationAgeSec: 60,
       maxAccuracyM: 30,
       reason: 'Include the new library building',
     });
+  });
+
+  it('adds a second campus as another area and sends both', async () => {
+    const m = mockApi({ 'PUT /admin/geofence/config': { body: { ...config, version: 4 } } });
+    api.setTokens({ accessToken: 'a', refreshToken: 'r' });
+    const onSaved = vi.fn();
+    const user = userEvent.setup();
+    renderWithClient(<GeofenceForm current={config} onSaved={onSaved} />);
+
+    await user.click(screen.getByRole('button', { name: '+ Add area' }));
+    expect(screen.getByRole('tab', { name: 'Area 2' })).toHaveAttribute('aria-selected', 'true');
+    const name = screen.getByLabelText('Area name');
+    await user.clear(name);
+    await user.type(name, 'SIIT Bangkadi campus');
+    const lat = screen.getByLabelText('Centre latitude');
+    await user.clear(lat);
+    await user.type(lat, '13.980481');
+    const lng = screen.getByLabelText('Centre longitude');
+    await user.clear(lng);
+    await user.type(lng, '100.55487');
+    await user.type(screen.getByLabelText(/Reason for the change/), 'Add the Bangkadi campus');
+    await user.click(screen.getByRole('button', { name: 'Save as new version' }));
+    await waitFor(() => expect(onSaved).toHaveBeenCalled());
+    expect(m.find('PUT', '/admin/geofence/config')[0]?.body).toMatchObject({
+      zones: [
+        { name: 'SIIT Rangsit', centerLat: 14.0693, centerLng: 100.6035, radiusM: 150 },
+        { name: 'SIIT Bangkadi campus', centerLat: 13.980481, centerLng: 100.55487, radiusM: 150 },
+      ],
+    });
+  });
+
+  it('rejects two areas with the same name', async () => {
+    const m = mockApi({});
+    const user = userEvent.setup();
+    renderWithClient(<GeofenceForm current={config} onSaved={vi.fn()} />);
+    await user.click(screen.getByRole('button', { name: '+ Add area' }));
+    const name = screen.getByLabelText('Area name');
+    await user.clear(name);
+    await user.type(name, 'SIIT Rangsit');
+    await user.type(screen.getByLabelText(/Reason for the change/), 'Duplicate');
+    await user.click(screen.getByRole('button', { name: 'Save as new version' }));
+    expect(await screen.findByText('Each area needs a different name')).toBeInTheDocument();
+    expect(m.calls).toHaveLength(0);
   });
 
   it('renders the key-less map fallback', () => {
