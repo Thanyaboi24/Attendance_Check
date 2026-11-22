@@ -5,7 +5,7 @@ export default {
   login: {
     title: 'เข้าสู่ระบบสำหรับบุคลากร',
     email: 'อีเมลของสถาบัน',
-    emailPlaceholder: 'name@university.ac.th',
+    emailPlaceholder: 'name@siit.tu.ac.th',
     password: 'รหัสผ่าน',
     showPassword: 'แสดงรหัสผ่าน',
     hidePassword: 'ซ่อนรหัสผ่าน',
@@ -39,7 +39,7 @@ export default {
     fullName: 'ชื่อ-นามสกุล',
     department: 'หน่วยงาน',
     email: 'อีเมลของสถาบัน',
-    emailPlaceholder: 'name@university.ac.th',
+    emailPlaceholder: 'name@siit.tu.ac.th',
     password: 'รหัสผ่าน',
     confirmPassword: 'ยืนยันรหัสผ่าน',
     passwordRules: 'อย่างน้อย 8 ตัวอักษร โดยมีตัวอักษรภาษาอังกฤษและตัวเลขอย่างน้อยอย่างละหนึ่งตัว',

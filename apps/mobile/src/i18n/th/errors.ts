@@ -8,6 +8,7 @@ export default {
   generic: 'เกิดข้อผิดพลาด กรุณาลองอีกครั้ง',
   validation: {
     email: 'กรุณากรอกอีเมลให้ถูกต้อง',
+    institutionalEmail: 'กรุณาใช้อีเมลของสถาบัน ({{domains}})',
     passwordRequired: 'กรุณากรอกรหัสผ่าน',
     passwordMin: 'รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร',
     passwordLetter: 'รหัสผ่านต้องมีตัวอักษรภาษาอังกฤษอย่างน้อยหนึ่งตัว',

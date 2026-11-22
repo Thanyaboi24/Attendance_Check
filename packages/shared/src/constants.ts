@@ -18,6 +18,22 @@ export const SIIT_CAMPUSES = [
   { name: 'SIIT Bangkadi campus', centerLat: 13.980481, centerLng: 100.55487 },
 ] as const;
 
+/** Every account (staff and administrators) must use one of these institutional email domains. */
+export const INSTITUTIONAL_EMAIL_DOMAINS = ['siit.tu.ac.th', 'g.siit.tu.ac.th'] as const;
+
+/** "@siit.tu.ac.th, @g.siit.tu.ac.th", for messages. */
+export const INSTITUTIONAL_EMAIL_DOMAINS_TEXT = INSTITUTIONAL_EMAIL_DOMAINS.map((d) => `@${d}`).join(', ');
+
+/** Validation message of the shared schemas; clients translate it (it is matched as a literal). */
+export const INSTITUTIONAL_EMAIL_MESSAGE = `Use your institutional email (${INSTITUTIONAL_EMAIL_DOMAINS_TEXT})`;
+
+/** True when the address ends in exactly one of the institutional domains (sub-domains do not count). */
+export function isInstitutionalEmail(email: string): boolean {
+  const normalised = email.trim().toLowerCase();
+  const domain = normalised.slice(normalised.lastIndexOf('@') + 1);
+  return normalised.includes('@') && (INSTITUTIONAL_EMAIL_DOMAINS as readonly string[]).includes(domain);
+}
+
 /** Display time zone; everything is stored and transported as UTC ISO-8601. */
 export const DISPLAY_TIME_ZONE = 'Asia/Bangkok';
 

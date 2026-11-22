@@ -3,7 +3,7 @@ export default {
   login: {
     title: 'Staff Login',
     email: 'Institutional email',
-    emailPlaceholder: 'name@university.ac.th',
+    emailPlaceholder: 'name@siit.tu.ac.th',
     password: 'Password',
     showPassword: 'Show password',
     hidePassword: 'Hide password',
@@ -37,7 +37,7 @@ export default {
     fullName: 'Full name',
     department: 'Department',
     email: 'Institutional email',
-    emailPlaceholder: 'name@university.ac.th',
+    emailPlaceholder: 'name@siit.tu.ac.th',
     password: 'Password',
     confirmPassword: 'Confirm password',
     passwordRules: 'At least 8 characters, including a letter and a digit.',

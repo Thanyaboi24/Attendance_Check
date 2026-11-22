@@ -64,6 +64,7 @@ export default {
     required: 'จำเป็นต้องกรอก',
     invalidInput: 'ข้อมูลไม่ถูกต้อง',
     invalidEmail: 'โปรดกรอกอีเมลที่ถูกต้อง',
+    institutionalEmail: 'โปรดใช้อีเมลของสถาบัน ({{domains}})',
     enterNumber: 'โปรดกรอกตัวเลข',
     wholeNumber: 'โปรดกรอกจำนวนเต็ม',
     minLength: 'อย่างน้อย {{count}} ตัวอักษร',

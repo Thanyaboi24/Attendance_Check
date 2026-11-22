@@ -62,6 +62,7 @@ export default {
     required: 'Required',
     invalidInput: 'Invalid input',
     invalidEmail: 'Enter a valid email address',
+    institutionalEmail: 'Use your institutional email ({{domains}})',
     enterNumber: 'Enter a number',
     wholeNumber: 'Enter a whole number',
     minLength: 'At least {{count}} characters',

@@ -136,11 +136,17 @@ describe('Staff sign-up and approval (e2e)', () => {
       await resetDb(ctx.prisma);
     };
     try {
-      process.env.SIGNUP_EMAIL_DOMAINS = 'siit.tu.ac.th';
-      await restart();
+      // Non-institutional domains are refused by the shared schema, whatever the env says.
       const gmail = await signUp({ ...applicant, email: 'someone@gmail.com' });
       expect(gmail.status).toBe(400);
-      expect(gmail.body.message).toContain('@siit.tu.ac.th');
+      expect(JSON.stringify(gmail.body)).toContain('@g.siit.tu.ac.th');
+
+      // SIGNUP_EMAIL_DOMAINS can narrow sign-up to some of the institutional domains.
+      process.env.SIGNUP_EMAIL_DOMAINS = 'siit.tu.ac.th';
+      await restart();
+      const gsiit = await signUp({ ...applicant, email: 'someone@g.siit.tu.ac.th' });
+      expect(gsiit.status).toBe(400);
+      expect(gsiit.body.message).toContain('@siit.tu.ac.th');
       expect((await signUp()).status).toBe(201);
 
       process.env.SIGNUP_ENABLED = 'false';

@@ -1,7 +1,7 @@
 import { GeofenceZoneSchema } from './geofence';
 import { z } from 'zod';
 import { AccountStatus } from '../enums';
-import { AccountStatusSchema, RoleSchema, UserProfileSchema } from './auth';
+import { AccountStatusSchema, InstitutionalEmailSchema, RoleSchema, UserProfileSchema } from './auth';
 import {
   AttendanceRequestDtoSchema,
   LocationClassSchema,
@@ -45,7 +45,7 @@ export type RejectSignup = z.input<typeof RejectSignupSchema>;
 
 export const CreateUserSchema = z.object({
   staffId: z.string().trim().min(1).max(40),
-  email: z.string().trim().toLowerCase().pipe(z.email()),
+  email: InstitutionalEmailSchema,
   fullName: z.string().trim().min(1).max(120),
   department: z.string().trim().min(1).max(120),
   role: RoleSchema,

@@ -1,3 +1,4 @@
+import { INSTITUTIONAL_EMAIL_DOMAINS_TEXT, isInstitutionalEmail } from '@attendance/shared';
 import { z } from 'zod';
 import { t } from '../i18n';
 
@@ -37,13 +38,14 @@ z.config({
   },
 });
 
-/** Trimmed, lower-cased institutional email (same rule as the shared `NormalisedEmail`). */
+/** Trimmed, lower-cased institutional email (same rule as the shared `InstitutionalEmailSchema`). */
 export const emailField = () =>
   z
     .string()
     .trim()
     .toLowerCase()
-    .pipe(z.email(msg(() => t('common:validation.invalidEmail'))));
+    .pipe(z.email(msg(() => t('common:validation.invalidEmail'))))
+    .refine(isInstitutionalEmail, msg(() => t('common:validation.institutionalEmail', { domains: INSTITUTIONAL_EMAIL_DOMAINS_TEXT })));
 
 export const requiredText = (max: number) =>
   z

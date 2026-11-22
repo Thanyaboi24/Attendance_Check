@@ -4,6 +4,7 @@
  *
  * Every error carries a string `kind` so checks do not depend on `instanceof` across bundles/realms.
  */
+import { INSTITUTIONAL_EMAIL_DOMAINS_TEXT, INSTITUTIONAL_EMAIL_MESSAGE } from '@attendance/shared';
 import { i18n, t } from '../i18n';
 
 export class ApiRequestError extends Error {
@@ -103,6 +104,7 @@ const VALIDATION_KEY = {
  */
 export function validationMessage(message: string | undefined, fallback: string): string {
   if (message == null) return fallback;
+  if (message === INSTITUTIONAL_EMAIL_MESSAGE) return t('errors:validation.institutionalEmail', { domains: INSTITUTIONAL_EMAIL_DOMAINS_TEXT });
   if (message in VALIDATION_KEY) return t(VALIDATION_KEY[message as keyof typeof VALIDATION_KEY]);
   return i18n.language === 'en' ? message : fallback;
 }

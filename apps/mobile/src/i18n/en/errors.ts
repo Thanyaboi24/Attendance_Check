@@ -7,6 +7,7 @@ export default {
   /** Messages of the shared zod schemas, translated at display time (validationMessage). */
   validation: {
     email: 'Enter a valid email address',
+    institutionalEmail: 'Use your institutional email ({{domains}})',
     passwordRequired: 'Enter your password',
     passwordMin: 'Password must be at least 8 characters',
     passwordLetter: 'Password must contain a letter',

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { INSTITUTIONAL_EMAIL_MESSAGE, isInstitutionalEmail } from '../constants';
 import { AccountStatus, Role } from '../enums';
 
 export const RoleSchema = z.enum([Role.STAFF, Role.ATTENDANCE_ADMIN, Role.SYSTEM_ADMIN]);
@@ -16,6 +17,9 @@ const NormalisedEmail = z
   .toLowerCase()
   .pipe(z.email({ message: 'Enter a valid email address' }));
 
+/** A valid email on one of the institutional domains (@siit.tu.ac.th, @g.siit.tu.ac.th). */
+export const InstitutionalEmailSchema = NormalisedEmail.refine(isInstitutionalEmail, { message: INSTITUTIONAL_EMAIL_MESSAGE });
+
 /** At least 8 characters with a letter and a digit. */
 export const PasswordSchema = z
   .string()
@@ -25,7 +29,7 @@ export const PasswordSchema = z
   .regex(/\d/, 'Password must contain a digit');
 
 export const LoginRequestSchema = z.object({
-  email: NormalisedEmail,
+  email: InstitutionalEmailSchema,
   password: z.string().min(1, 'Enter your password').max(128),
 });
 export type LoginRequest = z.input<typeof LoginRequestSchema>;
@@ -58,7 +62,7 @@ export type RefreshRequest = z.infer<typeof RefreshRequestSchema>;
 export const LogoutRequestSchema = z.object({ refreshToken: z.string().min(1) });
 export type LogoutRequest = z.infer<typeof LogoutRequestSchema>;
 
-export const ForgotPasswordRequestSchema = z.object({ email: NormalisedEmail });
+export const ForgotPasswordRequestSchema = z.object({ email: InstitutionalEmailSchema });
 export type ForgotPasswordRequest = z.input<typeof ForgotPasswordRequestSchema>;
 
 /** Used for both account activation and password reset (single-use, time-limited token). */
@@ -71,7 +75,7 @@ export type SetPasswordWithToken = z.infer<typeof SetPasswordWithTokenSchema>;
  */
 export const SignUpRequestSchema = z.object({
   staffId: z.string().trim().min(1, 'Enter your staff ID').max(40),
-  email: NormalisedEmail,
+  email: InstitutionalEmailSchema,
   fullName: z.string().trim().min(1, 'Enter your full name').max(120),
   department: z.string().trim().min(1, 'Enter your department').max(120),
   password: PasswordSchema,
