@@ -30,7 +30,7 @@ function SyncPill({ pending, failed, online }: { pending: number; failed: number
     failed > 0
       ? ['#FEE2E2', '#B91C1C', t('sync.failed', { n: String(failed) })]
       : pending > 0
-        ? ['#EDE9FE', '#6D28D9', t('sync.waiting', { n: String(pending) })]
+        ? ['#EDE9FE', '#702C8B', t('sync.waiting', { n: String(pending) })]
         : online
           ? [palette.greenSoft, palette.greenText, t('sync.synced')]
           : [palette.graySoft, palette.textSoft, t('sync.offline')];

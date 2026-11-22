@@ -6,7 +6,8 @@ import type { ConfigContext, ExpoConfig } from 'expo/config';
  * Env:
  *   EXPO_PUBLIC_API_URL       API base URL (default: Android emulator → host `http://10.0.2.2:3000/api/v1`)
  *   GOOGLE_MAPS_ANDROID_KEY   Maps SDK for Android key (restricted to th.ac.siit.attendance + SHA-1); optional
- *   APP_VARIANT               `development` (default) | `production`
+ *   APP_VARIANT               `development` (default) | `preview` (installable test APK on a local http API) |
+ *                             `production` (https only)
  *
  * Cleartext HTTP is allowed ONLY for non-production variants whose API URL is http:// (local backend on the
  * emulator). Production builds keep Android's default (HTTPS only, design §12.3).
@@ -24,14 +25,17 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 
   return {
     ...config,
-    name: isProduction ? 'Faculty Attendance' : 'Faculty Attendance (dev)',
+    name: variant === 'development' ? 'Faculty Attendance (dev)' : 'Faculty Attendance',
     slug: 'faculty-attendance',
     scheme: 'facultyattendance',
     version: '1.0.0',
     orientation: 'portrait',
     userInterfaceStyle: 'automatic',
+    // Launcher icon from assets/brand/app-logo.jpg (regenerate with `node scripts/make-icons.js`).
+    icon: './assets/icon.png',
     android: {
       package: 'th.ac.siit.attendance',
+      adaptiveIcon: { foregroundImage: './assets/adaptive-icon.png', backgroundColor: '#292F63' },
       versionCode: 1,
       permissions: [
         'ACCESS_FINE_LOCATION',
@@ -57,7 +61,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
             'Faculty Attendance uses your location in the background only to detect entering or leaving the faculty attendance area.',
         },
       ],
-      ['expo-notifications', { color: '#2563EB' }],
+      ['expo-notifications', { color: '#702C8B' }],
       'expo-secure-store',
       'expo-sqlite',
       ...(mapsKey ? [['react-native-maps', { androidGoogleMapsApiKey: mapsKey }] as [string, unknown]] : []),
@@ -67,6 +71,13 @@ export default ({ config }: ConfigContext): ExpoConfig => {
           android: {
             minSdkVersion: 26,
             usesCleartextTraffic: allowCleartext,
+            // Release builds are shrunk by R8, which removed the no-arg constructor of WorkManager's Room database
+            // (created by reflection), so the release APK crashed on start:
+            // "NoSuchMethodException: androidx.work.impl.WorkDatabase_Impl.<init> []".
+            extraProguardRules: [
+              '-keep class * extends androidx.room.RoomDatabase { <init>(); }',
+              '-keep class androidx.work.impl.WorkDatabase_Impl { *; }',
+            ].join('\n'),
           },
         },
       ],

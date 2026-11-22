@@ -15,7 +15,7 @@ const PILL: Record<PillTone, { bg: string; fg: string }> = {
   green: { bg: palette.greenSoft, fg: palette.greenText },
   amber: { bg: palette.amberSoft, fg: palette.amberText },
   gray: { bg: palette.graySoft, fg: palette.textSoft },
-  purple: { bg: '#EDE9FE', fg: '#6D28D9' },
+  purple: { bg: '#EDE9FE', fg: '#702C8B' },
   red: { bg: '#FEE2E2', fg: '#B91C1C' },
   blue: { bg: palette.blueSoft, fg: palette.blue },
 };

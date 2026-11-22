@@ -33,9 +33,9 @@ const CHART_HEIGHT = 150;
 const SCALE_FLOOR_MIN = WORKDAY_STANDARD.maxMinutes + 60;
 
 /** Bar and label colours for each verdict against the 7–9 h standard. */
-const STANDARD_COLOR: Record<DayStandard, string> = { BELOW: '#F59E0B', WITHIN: '#22C55E', ABOVE: '#6366F1' };
+const STANDARD_COLOR: Record<DayStandard, string> = { BELOW: '#F59E0B', WITHIN: '#22C55E', ABOVE: '#0D9488' };
 const STANDARD_TONE: Record<DayStandard, PillTone> = { BELOW: 'amber', WITHIN: 'green', ABOVE: 'purple' };
-const RUNNING_COLOR = '#2563EB';
+const RUNNING_COLOR = '#702C8B';
 const HOLIDAY_COLOR = '#E11D48';
 
 /**
@@ -123,7 +123,7 @@ export function HoursScreen() {
 
       <View style={styles.hero} accessible accessibilityLabel={`${t('total')}: ${formatDuration(summary.totalMinutes)}`}>
         <View style={styles.heroTop}>
-          <MaterialCommunityIcons name="clock-outline" size={22} color="#BFDBFE" />
+          <MaterialCommunityIcons name="clock-outline" size={22} color="#DCC0E8" />
           <Text style={styles.heroLabel}>{t('total')}</Text>
           {summary.running ? (
             <View style={styles.livePill}>
@@ -246,7 +246,7 @@ function Chart({ days, period, today }: { days: HoursDay[]; period: HoursPeriod;
                     : formatDuration(d.minutes),
               })}
             >
-              {week && d.minutes > 0 ? <Text style={styles.barValue}>{decimalHours(d.minutes)}</Text> : null}
+              {week && d.minutes > 0 ? <Text style={styles.barValue}>{d.minutes < 60 ? formatDuration(d.minutes) : decimalHours(d.minutes)}</Text> : null}
               <View style={[styles.bar, { height: h, borderRadius: week ? 8 : 3, backgroundColor: barColor(d) }]} />
               {d.missingCheckOut && d.minutes === 0 ? <View style={styles.missingDot} /> : null}
             </View>
@@ -315,7 +315,7 @@ function DayRow({ day, first, today }: { day: HoursDay; first: boolean; today: s
             </View>
           </View>
           {day.holiday ? <Text style={styles.holidayText}>{t('holidayDay', { name: holidayName(day.holiday, currentLanguage()) })}</Text> : null}
-          {gap ? <Text style={[styles.gap, { color: day.standard === 'BELOW' ? palette.amberText : '#4338CA' }]}>{gap}</Text> : null}
+          {gap ? <Text style={[styles.gap, { color: day.standard === 'BELOW' ? palette.amberText : '#0F766E' }]}>{gap}</Text> : null}
           {day.sessions.length > 1 ? (
             <View style={styles.sessions}>
               <Text style={styles.sessionsTitle}>{t('sessionsCount', { count: day.sessions.length })}</Text>
@@ -345,7 +345,8 @@ function InOut({ label, time }: { label: string; time: string }) {
   return (
     <View style={{ gap: 2 }}>
       <Text style={styles.inOutLabel}>{label}</Text>
-      <Text style={[styles.inOutTime, mono]}>{time}</Text>
+      {/* Times use the monospace digits; words such as "Still in" use the normal font. */}
+      <Text style={[styles.inOutTime, /^[\d-]{2}:[\d-]{2}$/.test(time) ? mono : styles.inOutWord]}>{time}</Text>
     </View>
   );
 }
@@ -366,14 +367,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: palette.border,
   },
-  hero: { backgroundColor: '#1E40AF', borderRadius: 24, padding: 20, gap: 4, elevation: 3 },
+  hero: { backgroundColor: '#4A1C5D', borderRadius: 24, padding: 20, gap: 4, elevation: 3 },
   heroTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  heroLabel: { flex: 1, fontSize: 15, fontWeight: '600', color: '#DBEAFE' },
+  heroLabel: { flex: 1, fontSize: 15, fontWeight: '600', color: '#EEDFF4' },
   heroValue: { fontSize: 40, fontWeight: '800', color: '#FFFFFF', letterSpacing: -0.5 },
-  heroCaption: { fontSize: 13, color: '#BFDBFE' },
+  heroCaption: { fontSize: 13, color: '#DCC0E8' },
   heroStats: { flexDirection: 'row', gap: 8, marginTop: 12 },
   heroStat: { flex: 1, backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 14, padding: 10, gap: 2 },
-  heroStatLabel: { fontSize: 12, color: '#BFDBFE' },
+  heroStatLabel: { fontSize: 12, color: '#DCC0E8' },
   heroStatValue: { fontSize: 15, fontWeight: '700', color: '#FFFFFF' },
   livePill: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(34,197,94,0.22)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
   liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#4ADE80' },
@@ -417,6 +418,7 @@ const styles = StyleSheet.create({
   inOutRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
   inOutLabel: { fontSize: 12, color: palette.textMuted },
   inOutTime: { fontSize: 20, color: palette.text },
+  inOutWord: { fontWeight: '700', color: '#702C8B' },
   dayTotalBox: { flex: 1, alignItems: 'flex-end', justifyContent: 'flex-end', minHeight: 44 },
   dayTotal: { fontSize: 18, fontWeight: '800', color: palette.textSoft },
   gap: { fontSize: 13, fontWeight: '600' },

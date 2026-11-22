@@ -39,7 +39,7 @@ const styles = StyleSheet.create({
   mark: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#6D28D9',
+    backgroundColor: '#702C8B',
     borderWidth: 4,
     borderColor: '#EDE9FE',
     elevation: 6,

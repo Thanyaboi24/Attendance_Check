@@ -1,0 +1,78 @@
+# SIIT Faculty Attendance: production server for https://siitatt.bsoftsolutions.net
+#
+#   web      : Caddy with the admin website built in. Gets the HTTPS certificate automatically and
+#              forwards /api/* to the API. The only service reachable from outside (ports 80/443).
+#   api      : NestJS API. Applies database migrations on start.
+#   postgres : PostgreSQL 16. Data in the "pgdata" volume; not reachable from outside.
+#
+# First install: sh install.sh   (creates .env with random secrets, then runs this file)
+name: siitatt
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: attendance
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?run install.sh or set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: attendance
+      # UTF-8 so Thai names (users, holidays) are stored correctly.
+      POSTGRES_INITDB_ARGS: --encoding=UTF8 --locale=C.UTF-8
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U attendance -d attendance']
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  api:
+    build: ./api
+    image: siitatt-api:${APP_VERSION:-latest}
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: '3000'
+      DATABASE_URL: postgresql://attendance:${POSTGRES_PASSWORD}@postgres:5432/attendance?schema=public
+      JWT_SECRET: ${JWT_SECRET:?run install.sh or set JWT_SECRET in .env}
+      CORS_ORIGINS: https://${DOMAIN:-siitatt.bsoftsolutions.net}
+      APP_LINK_BASE: https://${DOMAIN:-siitatt.bsoftsolutions.net}
+      TRUST_PROXY: 'true'
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      MAIL_FROM: ${MAIL_FROM:-Faculty Attendance <no-reply@siit.tu.ac.th>}
+      SIGNUP_ENABLED: ${SIGNUP_ENABLED:-true}
+      SIGNUP_EMAIL_DOMAINS: ${SIGNUP_EMAIL_DOMAINS:-siit.tu.ac.th,g.siit.tu.ac.th}
+      EVIDENCE_RETENTION_DAYS: ${EVIDENCE_RETENTION_DAYS:-365}
+      ENABLE_JOBS: 'true'
+      ENABLE_SWAGGER: ${ENABLE_SWAGGER:-false}
+    expose:
+      - '3000'
+
+  web:
+    build: ./web
+    image: siitatt-web:${APP_VERSION:-latest}
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - '${HTTP_PORT:-80}:80'
+      - '${HTTPS_PORT:-443}:443'
+      - '${HTTPS_PORT:-443}:443/udp'
+    environment:
+      DOMAIN: ${DOMAIN:-siitatt.bsoftsolutions.net}
+      ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL (HTTPS certificate notices) in .env}
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:

@@ -126,8 +126,19 @@ export function ConfirmResultDialog({ outcome, onClose, onRetry, onCorrection }:
       <Dialog visible onDismiss={onClose}>
         <Dialog.Title>{title}</Dialog.Title>
         <Dialog.Content style={{ gap: 8 }}>{body}</Dialog.Content>
-        <Dialog.Actions>{actions}</Dialog.Actions>
+        <Dialog.Actions>{actionButtons(actions)}</Dialog.Actions>
       </Dialog>
     </Portal>
   );
+}
+
+/**
+ * Dialog.Actions adds `compact` to each direct child. A fragment as the child makes React warn ("Invalid prop
+ * `compact` supplied to React.Fragment"), so a fragment of buttons is turned into a plain list of buttons first.
+ */
+function actionButtons(node: React.ReactNode): React.ReactNode {
+  if (React.isValidElement<{ children?: React.ReactNode }>(node) && node.type === React.Fragment) {
+    return React.Children.toArray(node.props.children);
+  }
+  return node;
 }

@@ -41,7 +41,7 @@ export const CLASS_COLOR: Record<LocationClass, string> = {
   [LocationClass.UNCERTAIN]: '#d97706',
 };
 
-export const GEOFENCE_COLOR = '#2563eb';
+export const GEOFENCE_COLOR = '#702c8b';
 
 const toRad = (d: number) => (d * Math.PI) / 180;
 const toDeg = (r: number) => (r * 180) / Math.PI;

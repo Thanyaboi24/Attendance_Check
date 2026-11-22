@@ -10,6 +10,7 @@ Both apps are available in **English and Thai (ภาษาไทย)**.
 - REST API contract: [docs/API.md](docs/API.md)
 - Translation rules and Thai glossary: [docs/i18n.md](docs/i18n.md)
 - Mobile app details: [apps/mobile/README.md](apps/mobile/README.md)
+- Production deployment (https://siitatt.bsoftsolutions.net): [deploy/README.md](deploy/README.md)
 
 ---
 
@@ -193,6 +194,21 @@ pnpm mobile:start             # then open the app on the emulator
 ```
 
 The emulator reaches the API on your computer at `http://10.0.2.2:3000/api/v1` (the default). For a real phone on the same Wi-Fi, set `EXPO_PUBLIC_API_URL` (see [Configuration](#configuration)).
+
+### Build an installable test APK
+
+To build a standalone APK for test phones on the same network as the PC running the API, run this in Git Bash from `apps/mobile`. Use the PC's LAN IP address:
+
+```bash
+export APP_VARIANT=preview EXPO_PUBLIC_API_URL="http://192.168.1.147:3000/api/v1"
+npx expo prebuild --platform android --no-install   # re-check android/local.properties afterwards
+cd android && ./gradlew assembleRelease             # → android/app/build/outputs/apk/release/app-release.apk
+```
+
+Notes:
+- The APK is signed with the debug key. Use a real keystore before any store release.
+- Phones need Android 8.0 or newer, and Windows Firewall must allow inbound TCP 3000.
+- Afterwards, run `npx expo prebuild --platform android` without those variables to return to the development configuration.
 
 ### Seed accounts (development only)
 

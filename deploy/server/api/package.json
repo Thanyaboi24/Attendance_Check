@@ -1,0 +1,31 @@
+{
+  "name": "siitatt-api",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Production runtime of the attendance API (prebuilt dist/ from apps/api). Assembled by deploy/make-package.mjs.",
+  "main": "dist/main.js",
+  "scripts": {
+    "start": "node dist/main.js"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@attendance/shared": "file:vendor/attendance-shared-1.0.0.tgz",
+    "@nestjs/common": "11.2.8",
+    "@nestjs/core": "11.2.8",
+    "@nestjs/jwt": "11.0.2",
+    "@nestjs/platform-express": "11.2.8",
+    "@nestjs/schedule": "6.1.3",
+    "@nestjs/swagger": "11.4.7",
+    "@nestjs/throttler": "6.7.1",
+    "@prisma/client": "6.19.3",
+    "argon2": "0.45.1",
+    "helmet": "8.3.0",
+    "nodemailer": "7.0.13",
+    "prisma": "6.19.3",
+    "reflect-metadata": "0.2.2",
+    "rxjs": "7.8.2",
+    "zod": "4.6.7"
+  }
+}

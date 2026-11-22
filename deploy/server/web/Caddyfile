@@ -1,0 +1,35 @@
+# Production web server for https://siitatt.bsoftsolutions.net
+# - Caddy obtains and renews the HTTPS certificate automatically (ports 80 and 443 must reach this server).
+# - /api/*  → NestJS API container (same origin: no CORS needed for the admin website)
+# - else    → admin website (built into the image at /srv/admin), single-page-app fallback to index.html
+{
+	email {$ACME_EMAIL}
+}
+
+{$DOMAIN:siitatt.bsoftsolutions.net} {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "geolocation=(), camera=(), microphone=()"
+		-Server
+	}
+
+	handle /api/* {
+		reverse_proxy api:3000
+	}
+
+	handle {
+		root * /srv/admin
+		# Hashed assets never change: cache for a year. index.html must always be fresh.
+		@assets path /assets/*
+		header @assets Cache-Control "public, max-age=31536000, immutable"
+		@html path / /index.html
+		header @html Cache-Control "no-cache"
+		try_files {path} /index.html
+		file_server
+	}
+}

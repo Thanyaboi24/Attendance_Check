@@ -56,7 +56,7 @@ export const GeofenceMap = forwardRef<
         const center = { latitude: z.centerLat, longitude: z.centerLng };
         return (
           <React.Fragment key={z.name}>
-            <Circle center={center} radius={z.radiusM} strokeColor={palette.blue} strokeWidth={3} fillColor="rgba(37,99,235,0.14)" />
+            <Circle center={center} radius={z.radiusM} strokeColor={palette.blue} strokeWidth={3} fillColor="rgba(112,44,139,0.14)" />
             <Marker coordinate={center} anchor={{ x: 0.5, y: 0.5 }} title={z.name} description={t('map.markerDescription', { radius: String(z.radiusM), version: String(cfg.version) })} tracksViewChanges={false}>
               <Dot color={palette.blue} size={22} />
             </Marker>

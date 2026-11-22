@@ -25,9 +25,10 @@ export function StatusChip({ status, compact }: { status: DisplayStatus; compact
   return (
     <Chip
       icon={STATUS_ICON[status]}
-      compact={compact}
-      style={{ backgroundColor: `${color}22`, alignSelf: 'flex-start', maxWidth: '100%' }}
-      textStyle={{ color }}
+      // Not Paper's `compact` prop: this Paper version forwards it to a React.Fragment, which React 19 rejects
+      // ("Invalid prop `compact` supplied to React.Fragment"). The smaller size is done with styles instead.
+      style={[{ backgroundColor: `${color}22`, alignSelf: 'flex-start', maxWidth: '100%' }, compact ? { height: 30 } : null]}
+      textStyle={[{ color }, compact ? { marginVertical: 0, marginHorizontal: 6, fontSize: 13, lineHeight: 18 } : null]}
       accessibilityLabel={t('statusA11y', { label })}
     >
       {label}

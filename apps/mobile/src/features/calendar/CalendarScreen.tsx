@@ -4,7 +4,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useQueryClient } from '@tanstack/react-query';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { palette } from '../../app/theme';
@@ -217,6 +217,10 @@ function DayCell({ cell, selected, onPress, lang }: { cell: CalendarCell; select
   const kind = dayKind(cell);
   const holiday = cell.holiday != null;
   const status = holiday && cell.holiday ? `${holidayName(cell.holiday, lang)}, ${t('checkInClosed')}` : t(`kind.${kind}`);
+  // Exact pixel size: Android draws a large or percentage radius on a percentage-sized view as a square.
+  // Screen − container padding (2×20) − card padding and border (2×17) − 6 gaps of 4 px, over 7 columns.
+  const { width } = useWindowDimensions();
+  const circle = Math.floor(((width - 40 - 34 - 24) / 7) * 0.86);
   return (
     <Pressable
       onPress={onPress}
@@ -228,6 +232,7 @@ function DayCell({ cell, selected, onPress, lang }: { cell: CalendarCell; select
       <View
         style={[
           styles.dayCircle,
+          { width: circle, height: circle, borderRadius: circle / 2 },
           holiday ? { backgroundColor: selected ? ROSE.fillDark : ROSE.fill } : selected ? { backgroundColor: palette.text } : null,
           cell.today ? styles.todayRing : null,
         ]}
@@ -338,7 +343,7 @@ const styles = StyleSheet.create({
   weekdayWeekend: { color: palette.textMuted },
   cell: { flex: 1, aspectRatio: 1, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   cellWeekend: { backgroundColor: WEEKEND_BG },
-  dayCircle: { width: '86%', aspectRatio: 1, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
+  dayCircle: { alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   todayRing: { borderWidth: 2.5, borderColor: palette.blue },
   dayNum: { fontSize: 16, fontWeight: '600', color: palette.text },
   legend: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 16, rowGap: 6 },

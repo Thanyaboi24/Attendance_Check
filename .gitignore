@@ -13,3 +13,10 @@ apps/mobile/ios/
 *.keystore
 .local-pg/
 .gradle/
+
+# Built APKs (see README: building a test APK)
+release/
+*.apk
+
+# Production secrets
+deploy/server/.env
