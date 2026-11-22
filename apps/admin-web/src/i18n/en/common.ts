@@ -34,6 +34,7 @@ export default {
     reports: 'Reports',
     users: 'Users',
     geofence: 'Geofence',
+    holidays: 'Holidays',
     auditLog: 'Audit log',
   },
   role: {
@@ -103,6 +104,8 @@ export default {
     CONFIG_VERSION_UNKNOWN: 'Unknown geofence configuration version.',
     CORRECTION_NOT_PENDING: 'This correction request has already been reviewed.',
     INVALID_TIME_RANGE: 'The time range is not valid.',
+    HOLIDAY_CHECK_IN_CLOSED: 'Check-in is closed today because it is a holiday. Check-out stays open.',
+    HOLIDAY_EXISTS: 'There is already a holiday on this date.',
     DUPLICATE_USER: 'A user with this email or staff ID already exists.',
     CONFLICT: 'The record was changed by someone else. Refresh and try again.',
     RATE_LIMITED: 'Too many requests. Please wait a moment and try again.',
@@ -194,6 +197,9 @@ export default {
       USER_SIGNUP_RESUBMITTED: 'Sign-up resubmitted',
       SIGNUP_APPROVED: 'Sign-up approved',
       SIGNUP_REJECTED: 'Sign-up rejected',
+      HOLIDAY_CREATED: 'Holiday added',
+      HOLIDAY_UPDATED: 'Holiday updated',
+      HOLIDAY_DELETED: 'Holiday deleted',
     },
     entityType: {
       AttendanceSession: 'AttendanceSession',
@@ -201,6 +207,14 @@ export default {
       CorrectionRequest: 'CorrectionRequest',
       User: 'User',
       GeofenceConfig: 'GeofenceConfig',
+      Holiday: 'Holiday',
+    },
+    holidayType: {
+      PUBLIC: 'Public holiday',
+      SUBSTITUTE: 'Substitution day',
+      GOVERNMENT: 'Government holiday',
+      SPECIAL: 'Special holiday',
+      UNIVERSITY: 'University holiday',
     },
     actorType: {
       SYSTEM: 'System',

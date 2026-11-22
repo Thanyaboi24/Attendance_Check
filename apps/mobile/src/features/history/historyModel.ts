@@ -1,6 +1,7 @@
 import { addDays, type AttendanceRequestDto, formatBangkokTime, type Method, RequestType, type SessionDto, toBangkokDate } from '@attendance/shared';
 import { currentLanguage, t } from '../../i18n';
 import { dateRange, dayShort } from '../../i18n/format';
+import { formatDuration, sessionMinutes } from '../hours/hoursModel';
 
 export type HistoryStatus = 'COMPLETED' | 'OPEN' | 'NEEDS_REVIEW' | 'CORRECTED';
 
@@ -31,6 +32,8 @@ export interface HistoryCard {
   checkOutAt: string | null;
   /** Shows "Request a correction". */
   needsCorrection: boolean;
+  /** "Worked 8 h 12 m" (running sessions count until now); null when the end is unknown. */
+  workedLabel: string | null;
 }
 
 const utc = (date: string) => new Date(`${date}T00:00:00Z`);
@@ -85,7 +88,7 @@ type IssueLike = Pick<AttendanceRequestDto, 'id' | 'type' | 'geofenceDetectedAt'
  * Turns the server's sessions + unresolved requests (GET /attendance/history) into history cards, newest first.
  * A past session without a check-out needs review; an unresolved request on a day without a session gets its own card.
  */
-export function buildHistoryCards(sessions: SessionDto[], issues: IssueLike[], today: string): HistoryCard[] {
+export function buildHistoryCards(sessions: SessionDto[], issues: IssueLike[], today: string, now: Date = new Date()): HistoryCard[] {
   const cards: HistoryCard[] = [];
   const issueDates = (type: RequestType) => new Set(issues.filter((i) => i.type === type).map((i) => toBangkokDate(i.geofenceDetectedAt)));
   const outIssues = issueDates(RequestType.CHECK_OUT);
@@ -121,6 +124,10 @@ export function buildHistoryCards(sessions: SessionDto[], issues: IssueLike[], t
       checkInAt: s.checkInAt,
       checkOutAt: s.checkOutAt,
       needsCorrection: status === 'NEEDS_REVIEW',
+      workedLabel: (() => {
+        const m = sessionMinutes(s, today, now);
+        return m.missing ? null : t('history:worked', { duration: formatDuration(m.minutes) });
+      })(),
     });
   }
 
@@ -142,6 +149,7 @@ export function buildHistoryCards(sessions: SessionDto[], issues: IssueLike[], t
       checkInAt: null,
       checkOutAt: null,
       needsCorrection: true,
+      workedLabel: null,
     });
   }
 

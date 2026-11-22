@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { HolidayDtoSchema } from './calendar';
 import {
   AttendanceState,
   LocationClass,
@@ -162,6 +163,8 @@ export const AttendanceStateResponseSchema = z.object({
   todaySessions: z.array(SessionDtoSchema),
   activeConfigVersion: z.number().int().nullable(),
   serverTime: IsoDateTime,
+  /** Today's holiday (Bangkok date), if any: check-in is closed for the day. */
+  todayHoliday: HolidayDtoSchema.nullable(),
 });
 export type AttendanceStateResponse = z.infer<typeof AttendanceStateResponseSchema>;
 

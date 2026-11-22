@@ -32,6 +32,14 @@ export default {
   requestCorrection: 'Request a correction',
   checkOutNow: 'Check out now',
   checkOutLater: 'Check-out is available once you are outside the area.',
+  holiday: {
+    kicker: 'Holiday',
+    title: 'No need to come in today — check-in is closed',
+    body: 'Automatic and manual check-in are switched off for the day. Check-out still works if you are checked in.',
+    locked: 'Check-in closed for the holiday',
+    calendar: 'Open calendar',
+    a11y: 'Holiday today: {{name}}. Check-in is closed.',
+  },
   timeline: {
     enteredArea: 'Entered faculty area',
     leftArea: 'Left faculty area',
@@ -72,6 +80,8 @@ export default {
     checkInNow: 'Check in now',
     checkOutNow: 'Check out now',
     dismissNote: 'Dismissing the notification does not cancel this request.',
+    holidayLocked: 'Check-in closed (holiday)',
+    holidayNote: 'Today is a holiday ({{name}}). This request will be closed automatically; nothing is recorded.',
   },
   result: {
     ok: 'OK',
@@ -99,5 +109,8 @@ export default {
     notRecorded: 'Not recorded',
     serverRejected: 'The server rejected the request.',
     error: 'Something went wrong',
+    holidayTitle: 'Check-in closed today',
+    holidayBody: 'Today is {{name}}. No need to come in — no attendance is needed.',
+    holidayBodyNoName: 'Today is a holiday. No need to come in — no attendance is needed.',
   },
 } as const;

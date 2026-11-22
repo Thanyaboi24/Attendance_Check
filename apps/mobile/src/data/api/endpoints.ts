@@ -5,6 +5,7 @@ import {
   CorrectionDtoSchema,
   GeofenceConfigSchema,
   HistoryResponseSchema,
+  HolidayListResponseSchema,
   LoginResponseSchema,
   OkResponseSchema,
   SignUpResponseSchema,
@@ -55,6 +56,8 @@ export function createAttendanceApi(http: AxiosInstance): AttendanceApi {
     },
     history: (from, to) =>
       call(HistoryResponseSchema, () => http.get('/attendance/history', { params: { from, to } }), 'GET /attendance/history'),
+    holidays: async (from, to) =>
+      (await call(HolidayListResponseSchema, () => http.get('/calendar/holidays', { params: { from, to } }), 'GET /calendar/holidays')).holidays,
     createCorrection: (body) =>
       call(CorrectionDtoSchema, () => http.post('/corrections', body, idem(body.correctionId)), 'POST /corrections'),
     listCorrections: () => call(z.array(CorrectionDtoSchema), () => http.get('/corrections'), 'GET /corrections'),

@@ -5,7 +5,8 @@ import { Link, Navigate, useLocation, useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
 import { t } from '../i18n';
-import { LanguageSwitch } from '../i18n/LanguageSwitch';
+import { AuthShell, IconInput, PasswordInput } from '../components/AuthShell';
+import { Icon } from '../components/icons';
 import { loginErrorMessage, useAuth } from '../auth/AuthContext';
 import { FieldError } from '../components/ui';
 import { emailField, msg } from '../lib/validation';
@@ -50,36 +51,46 @@ export function LoginPage() {
   });
 
   return (
-    <div className="auth-page">
-      <form className="card auth-card" onSubmit={onSubmit} noValidate>
-        <div className="auth-lang">
-          <LanguageSwitch />
-        </div>
+    <AuthShell>
+      <form className="auth-form" onSubmit={onSubmit} noValidate>
         <h1>{t('login.title')}</h1>
-        <p className="muted">{t('login.subtitle')}</p>
+        <p className="auth-subtitle">{t('login.subtitle')}</p>
         {notice && !error ? <div className="alert alert-info">{t(`login.${notice}`)}</div> : null}
         {error ? (
           <div className="alert alert-error" role="alert">
             {loginErrorMessage(error)}
           </div>
         ) : null}
-        <label className="field">
+        <label className="field auth-field">
           <span>{t('email')}</span>
-          <input type="email" autoComplete="username" {...register('email')} />
+          <IconInput
+            icon="mail"
+            type="email"
+            autoComplete="username"
+            placeholder={t('emailPlaceholder')}
+            aria-invalid={errors.email ? true : undefined}
+            {...register('email')}
+          />
           <FieldError message={errors.email?.message} />
         </label>
-        <label className="field">
+        <label className="field auth-field">
           <span>{t('password')}</span>
-          <input type="password" autoComplete="current-password" {...register('password')} />
+          <PasswordInput
+            autoComplete="current-password"
+            placeholder={t('passwordPlaceholder')}
+            aria-invalid={errors.password ? true : undefined}
+            {...register('password')}
+          />
           <FieldError message={errors.password?.message} />
         </label>
-        <button type="submit" className="btn btn-primary btn-block" disabled={isSubmitting}>
-          {isSubmitting ? t('login.submitting') : t('login.submit')}
-        </button>
-        <p className="center small">
+        <div className="auth-forgot">
           <Link to="/forgot-password">{t('login.forgot')}</Link>
-        </p>
+        </div>
+        <button type="submit" className="auth-submit" disabled={isSubmitting}>
+          <span>{isSubmitting ? t('login.submitting') : t('login.submit')}</span>
+          {isSubmitting ? <span className="spinner" aria-hidden /> : <Icon name="arrow" size={18} />}
+        </button>
       </form>
-    </div>
+    </AuthShell>
   );
 }

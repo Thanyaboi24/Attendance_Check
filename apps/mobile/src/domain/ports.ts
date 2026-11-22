@@ -11,6 +11,7 @@ import type {
   DeviceInfo,
   GeofenceConfig,
   HistoryResponse,
+  HolidayDto,
   LocationReading,
   LoginRequest,
   LoginResponse,
@@ -54,6 +55,8 @@ export interface AttendanceApi {
   unresolved(requestId: string, body: UnresolvedAttendance): Promise<AttendanceActionResult>;
   postNotificationEvent(body: NotificationEventInput): Promise<void>;
   history(from: string, to: string): Promise<HistoryResponse>;
+  /** GET /calendar/holidays (Bangkok dates, inclusive, at most 400 days). */
+  holidays(from: string, to: string): Promise<HolidayDto[]>;
   createCorrection(body: CreateCorrection): Promise<CorrectionDto>;
   listCorrections(): Promise<CorrectionDto[]>;
 }

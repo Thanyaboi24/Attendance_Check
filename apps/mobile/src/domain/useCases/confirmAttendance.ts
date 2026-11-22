@@ -2,12 +2,15 @@ import {
   type AttendanceActionResult,
   classify,
   decideManual,
+  type HolidayDto,
   type LocationClass,
   NotificationEventType,
   RequestStatus,
+  RequestType,
   type UncertainReason,
 } from '@attendance/shared';
-import { errorMessage, isLocationError, type LocationFailureReason } from '../errors';
+import { errorMessage, holidayOfError, isHolidayClosedError, isLocationError, type LocationFailureReason } from '../errors';
+import { holidayToday } from '../holidays';
 import type { AppDeps } from '../ports';
 import {
   getConfigForVersion,
@@ -18,6 +21,7 @@ import {
   saveEvidence,
   toEvidenceInput,
 } from './common';
+import { closeRequestForHoliday, HOLIDAY_REASON } from './holidayClosed';
 import { submitDecision } from './submitDecision';
 
 export type ConfirmOutcome =
@@ -39,6 +43,8 @@ export type ConfirmOutcome =
   | { kind: 'INVALID_STATE' }
   /** Backend answered REJECTED (e.g. MOCK_LOCATION, SESSION_ALREADY_OPEN). */
   | { kind: 'REJECTED'; reason: string | null; result: AttendanceActionResult }
+  /** Today is a holiday: check-in is closed (nothing was sent, or the backend closed the request). */
+  | { kind: 'HOLIDAY_CLOSED'; holiday: HolidayDto | null }
   | { kind: 'ERROR'; code: string; message: string };
 
 export interface ConfirmInput {
@@ -55,6 +61,16 @@ export async function confirmAttendance(deps: AppDeps, input: ConfirmInput): Pro
   const req = await deps.store.getRequest(requestId);
   if (!req) return { kind: 'ERROR', code: 'NOT_FOUND', message: 'This attendance request no longer exists on this phone.' };
   if (req.localAction) return { kind: 'PENDING_SYNC' };
+
+  // Holidays: check-in is closed (the Check in button is locked; this also covers the notification action).
+  // Nothing is sent; the grace job lets the backend close the request (it cancels it with reason HOLIDAY).
+  if (req.type === RequestType.CHECK_IN) {
+    const holiday = await holidayToday(deps);
+    if (holiday) {
+      await logEvent(deps, 'HOLIDAY_SKIPPED', requestId, { stage: 'confirm', via: input.via ?? null, date: holiday.date, holidayId: holiday.id });
+      return { kind: 'HOLIDAY_CLOSED', holiday };
+    }
+  }
 
   await deps.store.updateRequest(requestId, { userConfirmedAt: input.userConfirmedAt, updatedAt: nowIso(deps) });
   if (input.via === 'NOTIFICATION') {
@@ -117,6 +133,11 @@ export async function confirmAttendance(deps: AppDeps, input: ConfirmInput): Pro
   if (out.kind === 'QUEUED') return { kind: 'PENDING_SYNC' };
   if (out.kind === 'API_ERROR') {
     const { error } = out;
+    if (isHolidayClosedError(error)) {
+      const holiday = holidayOfError(error);
+      await closeRequestForHoliday(deps, requestId, holiday, 'CONFIRM');
+      return { kind: 'HOLIDAY_CLOSED', holiday };
+    }
     if (error.code === 'LOCATION_NOT_CONFIRMED') {
       const d = (error.details ?? {}) as { classification?: LocationClass; distanceM?: number; uncertainReason?: string };
       return {
@@ -136,5 +157,8 @@ export async function confirmAttendance(deps: AppDeps, input: ConfirmInput): Pro
     return { kind: 'RECORDED', result };
   }
   if (result.status === RequestStatus.REJECTED) return { kind: 'REJECTED', reason: result.reason, result };
+  if (result.status === RequestStatus.CANCELLED && result.reason === HOLIDAY_REASON) {
+    return { kind: 'HOLIDAY_CLOSED', holiday: await holidayToday(deps) };
+  }
   return { kind: 'ALREADY_RESOLVED', status: result.status, result };
 }

@@ -17,6 +17,7 @@ import { HealthController } from './health.controller';
 import { JobsModule } from './jobs/jobs.service';
 import { MailModule } from './mail/mail.service';
 import { PrismaModule } from './prisma/prisma.service';
+import { CalendarModule } from './calendar/calendar';
 import { SignupsModule } from './signups/signups';
 import { UsersModule } from './users/users';
 
@@ -43,6 +44,7 @@ class CoreModule {}
     AuthModule,
     UsersModule,
     SignupsModule,
+    CalendarModule,
     GeofenceModule,
     AttendanceModule,
     CorrectionsModule,

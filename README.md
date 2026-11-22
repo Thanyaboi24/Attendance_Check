@@ -39,6 +39,8 @@ Both apps are available in **English and Thai (ภาษาไทย)**.
 - A live location map showing distance, accuracy and an inside, outside or uncertain status
 - Attendance history with date-range and method filters
 - Correction requests for missed or wrong records
+- Working hours per week and month, checked against the standard 7–9 hour working day
+- Holiday calendar (Thai public holidays): on a holiday the app shows that nobody needs to come in and check-in is locked
 - Works offline: actions are queued in a local SQLite outbox and synced later with idempotent requests
 - Exportable evaluation log (CSV/JSON) for field testing
 - English and Thai, switchable in Settings, with Thai dates in the Buddhist Era year
@@ -49,6 +51,7 @@ Both apps are available in **English and Thai (ภาษาไทย)**.
 - Correction review (approve/reject with a note)
 - User management: create users, activation emails, lock/unlock and roles
 - Geofence configuration with versions and up to 10 areas, each with its own centre and radius; every change needs a reason and is audited
+- Holiday calendar management (Thai public holidays pre-loaded; add university closures or newly announced days)
 - CSV reports and an append-only audit log
 - Two roles: **Attendance Admin** and **System Admin**
 - English and Thai, switchable in the sidebar and on the sign-in page

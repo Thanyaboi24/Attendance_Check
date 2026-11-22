@@ -1,4 +1,5 @@
 import type {
+  HolidayDto,
   LocationClass,
   Method,
   NotificationStatus,
@@ -91,6 +92,8 @@ export interface StateSnapshot {
   activeConfigVersion: number | null;
   serverTime: string;
   fetchedAt: string;
+  /** Holiday on the Bangkok day of `serverTime` (check-in closed). Undefined in snapshots saved before holidays. */
+  todayHoliday?: HolidayDto | null;
 }
 
 /** Evaluation event log (design §8.3, §14): exported as CSV/JSON from the Settings screen. */
@@ -124,7 +127,11 @@ export type EventType =
   | 'MONITORING_UNAVAILABLE'
   | 'LOGIN'
   | 'LOGOUT'
-  | 'BOOTSTRAP';
+  | 'BOOTSTRAP'
+  /** ENTER on a holiday: no check-in request was created (check-in is closed). */
+  | 'HOLIDAY_SKIPPED'
+  /** The backend refused / cancelled a check-in because of a holiday (422 HOLIDAY_CHECK_IN_CLOSED or reason HOLIDAY). */
+  | 'HOLIDAY_CLOSED';
 
 export interface EventLogEntry {
   id: number;

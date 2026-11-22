@@ -26,6 +26,14 @@ enum AccountStatus {
   DEACTIVATED
 }
 
+enum HolidayType {
+  PUBLIC
+  SUBSTITUTE
+  GOVERNMENT
+  SPECIAL
+  UNIVERSITY
+}
+
 enum RequestType {
   CHECK_IN
   CHECK_OUT
@@ -301,4 +309,17 @@ model AuditLog {
 
   @@index([entityType, entityId])
   @@index([createdAt])
+}
+
+/// Holiday calendar: no check-in on these Bangkok dates (check-out stays open).
+model Holiday {
+  id          String      @id @default(uuid())
+  date        DateTime    @unique @db.Date
+  nameEn      String
+  nameTh      String
+  type        HolidayType
+  note        String?
+  createdById String?
+  createdAt   DateTime    @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime    @updatedAt @db.Timestamptz(3)
 }

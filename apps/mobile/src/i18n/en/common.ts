@@ -4,6 +4,8 @@ export default {
   tabs: {
     home: 'Home',
     history: 'History',
+    hours: 'Hours',
+    calendar: 'Calendar',
     requests: 'Requests',
   },
   screens: {
@@ -62,6 +64,8 @@ export default {
     SUPERSEDED: 'Replaced by a newer request.',
     LOCATION_NOT_CONFIRMED: 'The server could not confirm your location for this request.',
     CONFIG_VERSION_UNKNOWN: 'The geofence configuration used by this request is unknown to the server.',
+    HOLIDAY: 'Today is a holiday, so check-in is closed. No attendance is needed.',
+    HOLIDAY_CHECK_IN_CLOSED: 'Today is a holiday, so check-in is closed. No attendance is needed.',
   },
   /** Why a reading is uncertain (uncertainReasonText). */
   uncertainReason: {

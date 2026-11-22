@@ -39,6 +39,7 @@ import { AuditService } from '../audit/audit.service';
 import { AppException, Errors } from '../common/app-exception';
 import { ClockService } from '../common/clock.service';
 import { ENV, type Env } from '../config/env';
+import { holidayOn, toHolidayDto } from '../calendar/calendar';
 import { lockUser, PrismaService, type Tx } from '../prisma/prisma.service';
 import { toActionResult, toRequestDto, toSessionDto } from './mappers';
 
@@ -82,7 +83,7 @@ export class AttendanceService {
   async state(userId: string): Promise<AttendanceStateResponse> {
     const now = this.clock.now();
     const { start, end } = bangkokDayBounds(toBangkokDate(now));
-    const [openSession, activeRequest, todaySessions, config] = await Promise.all([
+    const [openSession, activeRequest, todaySessions, config, holiday] = await Promise.all([
       this.prisma.attendanceSession.findFirst({ where: { userId, status: 'OPEN' } }),
       this.prisma.attendanceRequest.findFirst({ where: { userId, status: 'ACTIVE' }, orderBy: { createdAt: 'desc' } }),
       this.prisma.attendanceSession.findMany({
@@ -90,6 +91,7 @@ export class AttendanceService {
         orderBy: { checkInAt: 'asc' },
       }),
       this.prisma.geofenceConfiguration.findFirst({ orderBy: { version: 'desc' }, select: { version: true } }),
+      holidayOn(this.prisma, toBangkokDate(now)),
     ]);
     return {
       state: deriveAttendanceState(!!openSession, activeRequest?.type ?? null),
@@ -98,6 +100,7 @@ export class AttendanceService {
       todaySessions: todaySessions.map(toSessionDto),
       activeConfigVersion: config?.version ?? null,
       serverTime: now.toISOString(),
+      todayHoliday: holiday ? toHolidayDto(holiday) : null,
     };
   }
 
@@ -142,6 +145,11 @@ export class AttendanceService {
       }
       if (dto.type === RequestType.CHECK_OUT && !openSession) {
         throw Errors.conflict(ErrorCode.NO_OPEN_SESSION, 'There is no open session to check out from');
+      }
+      // Holidays: nobody is expected to come in, so check-in is closed (check-out stays open).
+      if (dto.type === RequestType.CHECK_IN) {
+        const holiday = await holidayOn(tx, toBangkokDate(now));
+        if (holiday) throw holidayClosed(holiday);
       }
 
       const active = await tx.attendanceRequest.findFirst({ where: { userId, status: 'ACTIVE' } });
@@ -328,7 +336,12 @@ export class AttendanceService {
       }
       const openSession = await tx.attendanceSession.findFirst({ where: { userId, status: 'OPEN' } });
       const { config, ...plain } = req;
-      return handler({ tx, req: plain, config, now: this.clock.now(), openSession });
+      const now = this.clock.now();
+      // A check-in request still pending when a holiday starts (e.g. created just before midnight) is cancelled.
+      if (req.type === RequestType.CHECK_IN && (await holidayOn(tx, toBangkokDate(now)))) {
+        return this.finish({ tx, req: plain, config, now, openSession }, 'CANCELLED', 'HOLIDAY', null, {});
+      }
+      return handler({ tx, req: plain, config, now, openSession });
     });
     if (outcome.kind === 'error') throw outcome.error;
     return outcome.result;
@@ -414,6 +427,12 @@ export class AttendanceService {
     });
     return { kind: 'result', result: toActionResult(updated, ev) };
   }
+}
+
+function holidayClosed(h: { nameEn: string } & Parameters<typeof toHolidayDto>[0]): AppException {
+  return Errors.unprocessable(ErrorCode.HOLIDAY_CHECK_IN_CLOSED, `Check-in is closed today (${h.nameEn}). No attendance is needed on holidays.`, {
+    holiday: toHolidayDto(h),
+  });
 }
 
 function deviceFields(device: DeviceInfo | undefined) {

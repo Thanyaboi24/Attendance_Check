@@ -11,6 +11,12 @@ export default {
   live: 'Live',
   updated: 'Updated {{time}}',
   refresh: 'Refresh',
+  holiday: {
+    today: 'Today is a holiday: {{name}} — check-in is closed',
+    next_one: 'Next holiday: {{name}}, {{date}} (in {{count}} day)',
+    next_other: 'Next holiday: {{name}}, {{date}} (in {{count}} days)',
+    link: 'Holiday calendar',
+  },
   presence: {
     title: 'On campus now',
     ring: '{{now}} of {{total}} active staff are checked in',

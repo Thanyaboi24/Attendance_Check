@@ -2,6 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, Dialog, Portal, Text } from 'react-native-paper';
 import { reasonText, uncertainReasonText } from '../../domain/displayStatus';
+import { holidayName } from '../../domain/holidays';
 import type { ConfirmOutcome } from '../../domain/useCases/confirmAttendance';
 import { openAppSettings } from '../../services/location/permissions';
 import { fmtTime, StatusChip } from '../../ui/components';
@@ -15,7 +16,7 @@ interface Props {
 
 /** Shows the backend's answer. Only an approved result is "Recorded"; queued work is "Pending synchronization". */
 export function ConfirmResultDialog({ outcome, onClose, onRetry, onCorrection }: Props) {
-  const { t } = useTranslation('dashboard');
+  const { t, i18n } = useTranslation('dashboard');
   if (!outcome) return null;
   let title = '';
   let body: React.ReactNode = null;
@@ -102,6 +103,16 @@ export function ConfirmResultDialog({ outcome, onClose, onRetry, onCorrection }:
           <Button onPress={onCorrection}>{t('result.submitCorrection')}</Button>
           <Button onPress={onClose}>{t('result.ok')}</Button>
         </>
+      );
+      break;
+    case 'HOLIDAY_CLOSED':
+      title = t('result.holidayTitle');
+      body = (
+        <Text variant="bodyMedium">
+          {outcome.holiday
+            ? t('result.holidayBody', { name: holidayName(outcome.holiday, i18n.language === 'th' ? 'th' : 'en') })
+            : t('result.holidayBodyNoName')}
+        </Text>
       );
       break;
     case 'ERROR':

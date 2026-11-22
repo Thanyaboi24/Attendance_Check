@@ -8,5 +8,7 @@ import dashboard from './dashboard';
 import location from './location';
 import history from './history';
 import correction from './correction';
+import hours from './hours';
+import calendar from './calendar';
 
-export const th = { common, auth, onboarding, settings, notifications, errors, dashboard, location, history, correction };
+export const th = { common, auth, onboarding, settings, notifications, errors, dashboard, location, history, hours, calendar, correction };

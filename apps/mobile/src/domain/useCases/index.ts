@@ -8,3 +8,4 @@ export * from './submitCorrection';
 export * from './submitDecision';
 export * from './syncOutbox';
 export { getLocalView, refreshState, getActiveConfig, getConfigForVersion, META_ONBOARDED } from './common';
+export * from './holidayClosed';

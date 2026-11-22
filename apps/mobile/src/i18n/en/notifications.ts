@@ -56,4 +56,10 @@ export default {
       'The confirmation notification could not be shown, so no automatic attendance was recorded. Open the app to check in/out manually.',
     unresolvedLocation: 'Your location could not be verified, so nothing was recorded. Open the app to retry or submit a correction request.',
   },
+  /** Check-in refused / cancelled because today is a holiday. */
+  holiday: {
+    title: 'Holiday — no need to come in today',
+    body: 'Today is {{name}}. Check-in is closed, so no attendance is needed.',
+    bodyNoName: 'Today is a holiday. Check-in is closed, so no attendance is needed.',
+  },
 } as const;

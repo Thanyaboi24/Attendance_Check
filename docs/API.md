@@ -37,6 +37,7 @@ Links in emails: `${APP_LINK_BASE}/activate?token=…` and `${APP_LINK_BASE}/res
 | GET | `/geofence/config/active` | — | `GeofenceConfig` (any role) |
 | GET | `/geofence/config/{version}` | — | `GeofenceConfig` — pending requests keep their original version (DS2 §2.9.5) |
 | GET | `/attendance/state` | — | `AttendanceStateResponse` |
+| GET | `/calendar/holidays` | `?from=YYYY-MM-DD&to=YYYY-MM-DD` (≤ 400 days) | `HolidayListResponse` (any role). Thai public holidays + days added by administrators |
 | GET | `/attendance/history` | `?from=YYYY-MM-DD&to=YYYY-MM-DD` | `HistoryResponse` |
 | POST | `/attendance/requests` | `CreateAttendanceRequestSchema` | `201 AttendanceRequestDto` (`200` with the same DTO if `requestId` already exists for this user) |
 | POST | `/attendance/requests/{id}/confirm` | `ConfirmAttendanceSchema` | `AttendanceActionResult` |
@@ -46,6 +47,17 @@ Links in emails: `${APP_LINK_BASE}/activate?token=…` and `${APP_LINK_BASE}/res
 | POST | `/notification-events` | `NotificationEventSchema` | `{ ok: true }` |
 | POST | `/corrections` | `CreateCorrectionSchema` | `201 CorrectionDto` (`200` same DTO on retry) |
 | GET | `/corrections` | — | `CorrectionDto[]` (own, newest first) |
+
+### Holidays
+
+On a holiday (Bangkok calendar date in the `Holiday` table) nobody is expected to come in:
+
+- `POST /attendance/requests` with `type: CHECK_IN` returns `422 HOLIDAY_CHECK_IN_CLOSED` (`details.holiday`).
+- A `CHECK_IN` request still `ACTIVE` when the holiday starts is resolved `CANCELLED` (`resolutionReason: HOLIDAY`) on its next confirm/auto call.
+- `CHECK_OUT` stays open, so a session left open from the previous day can be closed.
+- `GET /attendance/state` includes `todayHoliday` (or `null`).
+
+The migration `20261122000000_holidays` loads the Thai public holidays for 2026 and 2027 (2027 marked preliminary). Administrators edit the calendar on the admin website.
 
 ### Attendance request semantics
 
@@ -90,6 +102,10 @@ Official attendance time is always the server approval time (never backdated). E
 | POST | `/admin/corrections/{id}/review` | AA | `ReviewCorrectionSchema` | `CorrectionDto`; APPROVE updates/creates the session (`ADMIN_CORRECTED`) in the same transaction + audit log. `409 CORRECTION_NOT_PENDING` |
 | GET | `/admin/reports/attendance.csv` | AA | `?from&to&department?` | `text/csv` (Bangkok times) |
 | GET | `/admin/reports/evaluation.csv` | AA, SA | `?from&to` | `text/csv`, one row per attendance request with every timestamp of design §8.3, device, config version, distance, classification — for the DS2 chapter-3 metrics |
+| GET | `/admin/holidays` | AA, SA | `?year=2026` | `AdminHolidayDto[]` |
+| POST | `/admin/holidays` | AA, SA | `CreateHolidaySchema` | `201 AdminHolidayDto`; `409 HOLIDAY_EXISTS` if the date is taken. Audit `HOLIDAY_CREATED` |
+| PATCH | `/admin/holidays/{id}` | AA, SA | `UpdateHolidaySchema` | `AdminHolidayDto`; audit `HOLIDAY_UPDATED` |
+| DELETE | `/admin/holidays/{id}` | AA, SA | — | `{ ok: true }`; audit `HOLIDAY_DELETED` |
 | GET | `/admin/signups` | AA, SA | `SignupListQuerySchema` (`status` default `PENDING_APPROVAL`; `REJECTED`, `ACTIVE`) | `Paginated<SignupDto>` (self-registered accounts, oldest pending first) |
 | POST | `/admin/signups/{id}/approve` | AA, SA | `ApproveSignupSchema` `{ note? }` | `SignupDto` (status `ACTIVE`, audit `SIGNUP_APPROVED`, email to the applicant). `409 SIGNUP_NOT_PENDING` |
 | POST | `/admin/signups/{id}/reject` | AA, SA | `RejectSignupSchema` `{ reason }` | `SignupDto` (status `REJECTED`, audit `SIGNUP_REJECTED`, email with the reason). `409 SIGNUP_NOT_PENDING` |

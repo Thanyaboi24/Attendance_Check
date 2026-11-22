@@ -1,6 +1,7 @@
 import { AccountStatus, RequestStatus, Role, type SessionDto, type UserProfile } from '@attendance/shared';
 import { t } from '../../i18n';
 import { errorMessage, isApiError, isAuthError, isNetworkError } from '../errors';
+import { refreshHolidays } from '../holidays';
 import type { AppDeps } from '../ports';
 import { getActiveConfig, logEvent, META_USER_ID, refreshState, safe } from './common';
 import { ensureMonitoring, type MonitoringStatus, stopMonitoring } from './monitoring';
@@ -77,6 +78,7 @@ export async function login(deps: AppDeps, email: string, password: string): Pro
 async function startAfterSignIn(deps: AppDeps, opts: { force: boolean }): Promise<MonitoringStatus> {
   const cfg = await getActiveConfig(deps, { refresh: true });
   await refreshState(deps);
+  await refreshHolidays(deps);
   const status = await ensureMonitoring(deps, cfg, opts);
   await safe(() => syncOutbox(deps));
   return status;
@@ -161,7 +163,11 @@ export async function bootstrap(deps: AppDeps, opts: { reason: 'APP_START' | 'FO
   }
 
   const cfg = await getActiveConfig(deps, { refresh: online });
-  if (online) await refreshState(deps);
+  if (online) {
+    await refreshState(deps);
+    // Holiday calendar for the headless geofence task (never fails: the last cache is kept).
+    await refreshHolidays(deps);
+  }
   const monitoring = await ensureMonitoring(deps, cfg, { force: opts.reason === 'BOOT' });
 
   // Re-schedule grace jobs (WorkManager KEEP makes this a no-op when the job is still pending).

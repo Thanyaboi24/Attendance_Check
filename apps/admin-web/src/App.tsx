@@ -7,6 +7,7 @@ import { AuditLogPage } from './pages/AuditLogPage';
 import { CorrectionsPage } from './pages/CorrectionsPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { GeofencePage } from './pages/GeofencePage';
+import { HolidaysPage } from './pages/HolidaysPage';
 import { LoginPage } from './pages/LoginPage';
 import { ForgotPasswordPage, SetPasswordPage } from './pages/PasswordPages';
 import { ReportsPage } from './pages/ReportsPage';
@@ -41,6 +42,7 @@ export function AppRoutes() {
         <Route path="/reports" element={guard('/reports', <ReportsPage />)} />
         <Route path="/users" element={guard('/users', <UsersPage />)} />
         <Route path="/geofence" element={guard('/geofence', <GeofencePage />)} />
+        <Route path="/holidays" element={guard('/holidays', <HolidaysPage />)} />
         <Route path="/audit-logs" element={guard('/audit-logs', <AuditLogPage />)} />
         <Route path="*" element={<Forbidden />} />
       </Route>

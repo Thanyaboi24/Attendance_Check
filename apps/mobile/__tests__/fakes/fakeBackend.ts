@@ -15,9 +15,11 @@ import {
   type GeofenceConfig,
   GRACE_CLOCK_SKEW_SEC,
   type HistoryResponse,
+  type HolidayDto,
   type NotificationEventInput,
   oppositeClassFor,
   type SessionDto,
+  toBangkokDate,
   type UnresolvedAttendance,
 } from '@attendance/shared';
 import { ApiRequestError, NetworkError } from '../../src/domain/errors';
@@ -40,6 +42,8 @@ export class FakeBackend implements AttendanceApi {
   calls: Array<{ method: Method; requestId?: string; body?: unknown }> = [];
   notificationEvents: NotificationEventInput[] = [];
   corrections: CorrectionDto[] = [];
+  /** Holiday calendar (GET /calendar/holidays); check-in is closed on these Bangkok dates. */
+  holidayList: HolidayDto[] = [];
   /** Errors to throw on the next call(s) of a method (consumed in order). */
   private injected = new Map<Method, Error[]>();
   /** Simulates "server processed the request but the response was lost" for the next call of a method. */
@@ -80,6 +84,10 @@ export class FakeBackend implements AttendanceApi {
   private now() {
     return this.serverNow().toISOString();
   }
+  private todayHoliday(): HolidayDto | null {
+    const today = toBangkokDate(this.serverNow());
+    return this.holidayList.find((h) => h.date === today) ?? null;
+  }
 
   async getState(): Promise<AttendanceStateResponse> {
     this.enter('getState');
@@ -91,6 +99,7 @@ export class FakeBackend implements AttendanceApi {
       todaySessions: this.sessions,
       activeConfigVersion: this.activeVersion,
       serverTime: this.now(),
+      todayHoliday: this.todayHoliday(),
     };
   }
   async getActiveConfig() {
@@ -110,6 +119,10 @@ export class FakeBackend implements AttendanceApi {
     if (existing) return this.leave('createRequest', existing);
     const cfg = this.configs.get(body.configVersion);
     if (!cfg) throw new ApiRequestError(404, 'CONFIG_VERSION_UNKNOWN', 'unknown config');
+    const holiday = this.todayHoliday();
+    if (body.type === 'CHECK_IN' && holiday) {
+      throw new ApiRequestError(422, 'HOLIDAY_CHECK_IN_CLOSED', `Check-in is closed today (${holiday.nameEn}).`, { holiday });
+    }
     if (body.type === 'CHECK_IN' && this.openSession) throw new ApiRequestError(409, 'SESSION_ALREADY_OPEN', 'open');
     if (body.type === 'CHECK_OUT' && !this.openSession) throw new ApiRequestError(409, 'NO_OPEN_SESSION', 'none');
     const other = [...this.requests.values()].find((r) => r.status === 'ACTIVE');
@@ -212,6 +225,7 @@ export class FakeBackend implements AttendanceApi {
     const req = this.load(id);
     const stored = this.results.get(id);
     if (stored) return this.leave('confirm', stored);
+    if (req.type === 'CHECK_IN' && this.todayHoliday()) return this.leave('confirm', this.finish(req, 'CANCELLED', { reason: 'HOLIDAY' }));
     const c = this.classifyServer(req, body.evidence);
     if (body.evidence.isMock) return this.leave('confirm', this.finish(req, 'REJECTED', { reason: 'MOCK_LOCATION' }));
     if (!this.sessionValid(req)) {
@@ -235,6 +249,7 @@ export class FakeBackend implements AttendanceApi {
     const req = this.load(id);
     const stored = this.results.get(id);
     if (stored) return this.leave('auto', stored);
+    if (req.type === 'CHECK_IN' && this.todayHoliday()) return this.leave('auto', this.finish(req, 'CANCELLED', { reason: 'HOLIDAY' }));
     if (this.serverNow().getTime() + GRACE_CLOCK_SKEW_SEC * 1000 < Date.parse(req.deadlineAt)) {
       throw new ApiRequestError(409, 'GRACE_PERIOD_NOT_EXPIRED', 'too early');
     }
@@ -284,6 +299,10 @@ export class FakeBackend implements AttendanceApi {
   async history(): Promise<HistoryResponse> {
     this.enter('history');
     return { sessions: this.sessions, issues: [] };
+  }
+  async holidays(from: string, to: string): Promise<HolidayDto[]> {
+    this.enter('holidays');
+    return this.holidayList.filter((h) => h.date >= from && h.date <= to);
   }
   async createCorrection(body: CreateCorrection): Promise<CorrectionDto> {
     this.enter('createCorrection', undefined, body);

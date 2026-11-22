@@ -6,6 +6,15 @@ export const DEFAULT_GEOFENCE = {
   maxAccuracyM: 30,
 } as const;
 
+/**
+ * Standard working day: a day's working time (check-out minus check-in, summed over the day's sessions)
+ * is expected to be between these bounds. Used to label days as below / within / over the standard.
+ */
+export const WORKDAY_STANDARD = {
+  minMinutes: 7 * 60,
+  maxMinutes: 9 * 60,
+} as const;
+
 export const RADIUS_MIN_M = 1;
 export const RADIUS_MAX_M = 1000;
 /** Android allows 100 geofences per app; a handful of campuses is plenty. */

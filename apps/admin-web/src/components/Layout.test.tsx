@@ -35,6 +35,7 @@ describe('Role-based navigation', () => {
       'Corrections',
       'Reports',
       'Geofence',
+      'Holidays',
       'Audit log',
     ]);
   });
@@ -43,7 +44,7 @@ describe('Role-based navigation', () => {
     mockApi({ 'GET /me': { body: makeUser(Role.SYSTEM_ADMIN) }, 'GET /admin/dashboard/summary': { body: summary } });
     renderApp('/dashboard', { signedIn: true });
     const links = await navLinks();
-    expect(links).toEqual(['Dashboard', 'Sign-up requests', 'Reports', 'Users', 'Geofence', 'Audit log']);
+    expect(links).toEqual(['Dashboard', 'Sign-up requests', 'Reports', 'Users', 'Geofence', 'Holidays', 'Audit log']);
     expect(links).not.toContain('Attendance sessions');
   });
 

@@ -24,6 +24,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { path: '/reports', labelKey: 'reports', roles: [AA, SA] },
   { path: '/users', labelKey: 'users', roles: [SA] },
   { path: '/geofence', labelKey: 'geofence', roles: [AA, SA] },
+  { path: '/holidays', labelKey: 'holidays', roles: [AA, SA] },
   { path: '/audit-logs', labelKey: 'auditLog', roles: [AA, SA] },
 ];
 

@@ -7,11 +7,14 @@ import {
   type GeofenceTransition,
   type LocationClass,
   NotificationEventType,
+  type HolidayDto,
   RequestStatus,
-  type RequestType,
+  RequestType,
   SyncStatus,
+  toBangkokDate,
 } from '@attendance/shared';
-import { errorMessage, isApiError } from '../errors';
+import { errorMessage, holidayOfError, isApiError, isHolidayClosedError } from '../errors';
+import { holidayOn } from '../holidays';
 import type { LocalRequest } from '../models';
 import type { AppDeps } from '../ports';
 import {
@@ -31,6 +34,7 @@ import {
   toEvidenceInput,
 } from './common';
 import { evaluateAutoAttendance } from './evaluateAutoAttendance';
+import { closeRequestForHoliday, notifyHolidayClosed } from './holidayClosed';
 import { submitDecision } from './submitDecision';
 
 export interface TransitionInput {
@@ -51,6 +55,10 @@ export type TransitionOutcome =
       sync: 'SYNCED' | 'PENDING_SYNC';
     }
   | { kind: 'REQUEST_REFUSED'; requestId: string; code: string }
+  /** ENTER on a holiday known to the phone: check-in is closed, so no request and no notification. */
+  | { kind: 'HOLIDAY_SKIPPED'; date: string; holiday: HolidayDto }
+  /** The backend refused the check-in for a holiday (422 HOLIDAY_CHECK_IN_CLOSED): the request is closed. */
+  | { kind: 'HOLIDAY_CLOSED'; requestId: string; holiday: HolidayDto | null }
   | { kind: 'PENDING_CANCELLED'; requestId: string; queued: boolean }
   | { kind: 'PENDING_KEPT'; requestId: string; classification: LocationClass | null };
 
@@ -69,6 +77,7 @@ export const regionIdFor = (cfg: Pick<GeofenceConfig, 'version'>, zoneIndex = 0)
  *   ENTER + CHECKED_OUT → CHECK_IN request;  EXIT + CHECKED_IN → CHECK_OUT request
  *   opposite transition while pending → fresh fix; cancel only when the opposite side is confirmed
  *   anything else → ignore (logged for evaluation)
+ *   ENTER on a holiday → no request (check-in is closed); EXIT / check-out is unchanged
  * New request: local row → notification (POSTED/FAILED) → POST /attendance/requests (or outbox) → schedule grace job.
  */
 export async function handleGeofenceTransition(deps: AppDeps, input: TransitionInput): Promise<TransitionOutcome> {
@@ -104,6 +113,22 @@ export async function handleGeofenceTransition(deps: AppDeps, input: TransitionI
 
   if (decision.kind === 'REVALIDATE_PENDING') {
     return revalidatePending(deps, view.activeRequest as LocalRequest);
+  }
+
+  // Holidays: nobody is expected to come in, so check-in is closed. Check-out (EXIT) is not affected.
+  if (decision.type === RequestType.CHECK_IN) {
+    const date = toBangkokDate(input.detectedAt);
+    const holiday = await holidayOn(deps, date);
+    if (holiday) {
+      await logEvent(deps, 'HOLIDAY_SKIPPED', null, {
+        transition: input.transition,
+        date,
+        holidayId: holiday.id,
+        holidayType: holiday.type,
+        name: holiday.nameEn,
+      });
+      return { kind: 'HOLIDAY_SKIPPED', date, holiday };
+    }
   }
 
   // CREATE_REQUEST: use the version of the geofence that fired; fall back to the active cached config.
@@ -181,6 +206,13 @@ export async function handleGeofenceTransition(deps: AppDeps, input: TransitionI
       sync = 'SYNCED';
     }
   } catch (e) {
+    if (isHolidayClosedError(e)) {
+      // The phone did not know about the holiday (no cache yet / added today): close the request quietly.
+      const holiday = holidayOfError(e);
+      await closeRequestForHoliday(deps, requestId, holiday, 'CREATE');
+      await notifyHolidayClosed(deps, holiday, requestId);
+      return { kind: 'HOLIDAY_CLOSED', requestId, holiday };
+    }
     if (isApiError(e)) {
       // 409 SESSION_ALREADY_OPEN / NO_OPEN_SESSION / ACTIVE_REQUEST_EXISTS, 404 CONFIG_VERSION_UNKNOWN…
       // The local view was stale: the backend is the source of truth.

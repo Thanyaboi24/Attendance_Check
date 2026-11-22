@@ -34,6 +34,7 @@ const STATE = {
   todaySessions: [],
   activeConfigVersion: 1,
   serverTime: '2026-11-03T01:00:00.000Z',
+  todayHoliday: null,
 };
 
 /** Fake server: accepts only the "new" access token; /auth/refresh rotates r1 → r2 once. */

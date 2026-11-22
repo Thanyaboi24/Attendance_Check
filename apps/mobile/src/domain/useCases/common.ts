@@ -437,6 +437,7 @@ export function snapshotFrom(resp: AttendanceStateResponse, fetchedAt: string): 
     activeConfigVersion: resp.activeConfigVersion,
     serverTime: resp.serverTime,
     fetchedAt,
+    todayHoliday: resp.todayHoliday ?? null,
   };
 }
 

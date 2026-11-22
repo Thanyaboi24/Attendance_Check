@@ -6,6 +6,8 @@ export default {
   tabs: {
     home: 'หน้าหลัก',
     history: 'ประวัติ',
+    hours: 'ชั่วโมงงาน',
+    calendar: 'ปฏิทิน',
     requests: 'คำขอ',
   },
   screens: {
@@ -61,6 +63,8 @@ export default {
     SUPERSEDED: 'ถูกแทนที่ด้วยคำขอที่ใหม่กว่า',
     LOCATION_NOT_CONFIRMED: 'เซิร์ฟเวอร์ยืนยันตำแหน่งของคุณสำหรับคำขอนี้ไม่ได้',
     CONFIG_VERSION_UNKNOWN: 'เซิร์ฟเวอร์ไม่รู้จักการตั้งค่าพื้นที่ลงเวลาที่คำขอนี้ใช้',
+    HOLIDAY: 'วันนี้เป็นวันหยุด จึงปิดการลงเวลาเข้า ไม่จำเป็นต้องลงเวลา',
+    HOLIDAY_CHECK_IN_CLOSED: 'วันนี้เป็นวันหยุด จึงปิดการลงเวลาเข้า ไม่จำเป็นต้องลงเวลา',
   },
   uncertainReason: {
     STALE_READING: 'ค่าตำแหน่งเก่าเกินไป',

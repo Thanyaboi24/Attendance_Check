@@ -1,11 +1,12 @@
 import {
   addDays,
+  DISPLAY_TIME_ZONE,
   bangkokLocalToIso,
   formatBangkokDateTime,
   formatBangkokTime,
   toBangkokDate,
 } from '@attendance/shared';
-import { i18n, t } from '../i18n';
+import { currentLanguage, i18n, t } from '../i18n';
 import type { en } from '../i18n/en';
 
 /** `YYYY-MM-DD HH:mm` in Asia/Bangkok, or an em dash. */
@@ -88,4 +89,53 @@ export function saveBlob(blob: Blob, filename: string): void {
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// ---- calendar dates (YYYY-MM-DD, Bangkok) ---------------------------------------------------------------------
+
+const dateLocale = () => (currentLanguage() === 'th' ? 'th-TH' : 'en-GB');
+/** Noon in Bangkok on a calendar date: safe from time-zone edges when formatting. */
+const bangkokNoon = (date: string) => new Date(`${date}T12:00:00+07:00`);
+
+function dateParts(date: string, opts: Intl.DateTimeFormatOptions): Record<string, string> {
+  const parts = new Intl.DateTimeFormat(dateLocale(), { ...opts, timeZone: DISPLAY_TIME_ZONE }).formatToParts(bangkokNoon(date));
+  return Object.fromEntries(parts.map((p) => [p.type, p.value]));
+}
+
+const THAI_WEEKDAY_SHORT = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'];
+
+/** Year as shown to the reader: `2026` / Buddhist Era `2569`. */
+export function fmtYear(year: number): string {
+  return String(currentLanguage() === 'th' ? year + 543 : year);
+}
+
+/** "Mon 7 Dec" / "จ. 7 ธ.ค." for a Bangkok calendar date (YYYY-MM-DD). */
+export function fmtShortDate(date: string): string {
+  if (Number.isNaN(bangkokNoon(date).getTime())) return date;
+  const p = dateParts(date, { weekday: 'short', day: 'numeric', month: 'short' });
+  // Browsers disagree on short Thai weekdays ("จ." vs "จันทร์"): use the standard abbreviations.
+  const weekday =
+    currentLanguage() === 'th' ? THAI_WEEKDAY_SHORT[new Date(`${date}T00:00:00Z`).getUTCDay()] : p.weekday;
+  return `${weekday} ${p.day} ${p.month}`;
+}
+
+/** "Mon 7 Dec 2026" / "จ. 7 ธ.ค. 2569". */
+export function fmtShortDateYear(date: string): string {
+  return `${fmtShortDate(date)} ${fmtYear(Number(date.slice(0, 4)))}`;
+}
+
+/** "December 2026" / "ธันวาคม 2569" for a month (1–12) of a year. */
+export function fmtMonthYear(year: number, month: number): string {
+  const p = dateParts(`${year}-${String(month).padStart(2, '0')}-15`, { month: 'long' });
+  return `${p.month} ${fmtYear(year)}`;
+}
+
+/** Whole days from `from` to `to` (both YYYY-MM-DD); negative when `to` is earlier. */
+export function daysBetween(from: string, to: string): number {
+  return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000);
+}
+
+/** Holiday name in the current language (both names are data typed by administrators). */
+export function holidayName(h: { nameEn: string; nameTh: string }): string {
+  return currentLanguage() === 'th' ? h.nameTh || h.nameEn : h.nameEn || h.nameTh;
 }

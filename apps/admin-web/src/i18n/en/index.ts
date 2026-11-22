@@ -9,5 +9,6 @@ import geofence from './geofence';
 import reports from './reports';
 import audit from './audit';
 import signups from './signups';
+import holidays from './holidays';
 
-export const en = { common, auth, dashboard, requests, sessions, corrections, users, geofence, reports, audit, signups };
+export const en = { common, auth, dashboard, requests, sessions, corrections, users, geofence, reports, audit, signups, holidays };

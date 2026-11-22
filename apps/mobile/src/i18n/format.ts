@@ -19,6 +19,11 @@ const MONTH: Record<Language, readonly string[]> = {
   th: ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'],
 };
 
+const MONTH_LONG: Record<Language, readonly string[]> = {
+  en: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+  th: ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'],
+};
+
 function parts(date: string) {
   const [y, m, d] = date.split('-').map(Number) as [number, number, number];
   const weekday = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
@@ -61,4 +66,14 @@ export function dateRange(from: string, to: string, lang: Language = currentLang
 /** "29 Oct 2026 14:05" / "29 ต.ค. 2569 14:05" for an instant, in Bangkok time. */
 export function dateTime(iso: string, lang: Language = currentLanguage()): string {
   return `${dayMonthYear(toBangkokDate(iso), lang)} ${formatBangkokTime(iso)}`;
+}
+
+/** "December 2026" / "ธันวาคม 2569" (month 1–12; Buddhist Era year in Thai). */
+export function monthYearLong(y: number, m: number, lang: Language = currentLanguage()): string {
+  return `${MONTH_LONG[lang][m - 1]} ${year(y, lang)}`;
+}
+
+/** Short weekday names Monday → Sunday (calendar grid headers): "Mon" … "Sun" / "จ." … "อา.". */
+export function weekdayHeaders(lang: Language = currentLanguage()): string[] {
+  return [1, 2, 3, 4, 5, 6, 0].map((i) => WEEKDAY[lang][i] as string);
 }

@@ -13,4 +13,5 @@ export default {
   in: 'In',
   out: 'Out',
   requestCorrection: 'Request a correction',
+  worked: 'Worked {{duration}}',
 } as const;

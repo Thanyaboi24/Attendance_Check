@@ -9,3 +9,4 @@ export * from './schemas/geofence';
 export * from './schemas/attendance';
 export * from './schemas/corrections';
 export * from './schemas/admin';
+export * from './schemas/calendar';

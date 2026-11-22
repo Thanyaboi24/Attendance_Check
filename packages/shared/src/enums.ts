@@ -88,6 +88,21 @@ export type AttendanceState = (typeof AttendanceState)[keyof typeof AttendanceSt
 export const GeofenceTransition = { ENTER: 'ENTER', EXIT: 'EXIT' } as const;
 export type GeofenceTransition = (typeof GeofenceTransition)[keyof typeof GeofenceTransition];
 
+/** Kind of day off in the holiday calendar. */
+export const HolidayType = {
+  /** National public holiday (Cabinet announcement). */
+  PUBLIC: 'PUBLIC',
+  /** Substitution day for a public holiday that falls on a weekend. */
+  SUBSTITUTE: 'SUBSTITUTE',
+  /** Holiday for government agencies (e.g. Royal Ploughing Ceremony, Khao Phansa). */
+  GOVERNMENT: 'GOVERNMENT',
+  /** Extra holiday declared by the Cabinet for a particular year. */
+  SPECIAL: 'SPECIAL',
+  /** Closure decided by the university / institute. */
+  UNIVERSITY: 'UNIVERSITY',
+} as const;
+export type HolidayType = (typeof HolidayType)[keyof typeof HolidayType];
+
 /** Machine-readable error codes returned by the API in `{ code, message }` bodies. */
 export const ErrorCode = {
   INVALID_CREDENTIALS: 'INVALID_CREDENTIALS',
@@ -97,6 +112,8 @@ export const ErrorCode = {
   ACCOUNT_REJECTED: 'ACCOUNT_REJECTED',
   SIGNUP_DISABLED: 'SIGNUP_DISABLED',
   SIGNUP_NOT_PENDING: 'SIGNUP_NOT_PENDING',
+  HOLIDAY_CHECK_IN_CLOSED: 'HOLIDAY_CHECK_IN_CLOSED',
+  HOLIDAY_EXISTS: 'HOLIDAY_EXISTS',
   TOKEN_INVALID: 'TOKEN_INVALID',
   FORBIDDEN: 'FORBIDDEN',
   NOT_FOUND: 'NOT_FOUND',

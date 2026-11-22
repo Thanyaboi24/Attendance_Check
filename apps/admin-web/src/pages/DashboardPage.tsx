@@ -2,12 +2,13 @@ import { useQuery } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { DISPLAY_TIME_ZONE, type DashboardSummary } from '@attendance/shared';
+import { addDays, DISPLAY_TIME_ZONE, type DashboardSummary, type HolidayListResponse } from '@attendance/shared';
 import { api } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { rolesFor } from '../auth/roles';
 import { Icon, type IconName } from '../components/icons';
 import { ErrorBox } from '../components/ui';
+import { daysBetween, fmtShortDate, holidayName, todayBangkok } from '../lib/format';
 
 type AttentionKey = 'unresolvedRequests' | 'pendingCorrections' | 'longOpenSessions' | 'pendingSignups';
 
@@ -101,6 +102,7 @@ export function DashboardPage() {
               {longDate(s.date, i18n.language)} · {t('bangkokTime')}
             </p>
           ) : null}
+          <HolidayChip canFollow={canFollow('/holidays')} />
         </div>
         {s ? (
           <div className="dash-live">
@@ -218,6 +220,38 @@ export function DashboardPage() {
         </div>
       ) : null}
     </div>
+  );
+}
+
+/** Today's holiday (check-in closed) or the next one within 30 days; nothing when the calendar can't be read. */
+function HolidayChip({ canFollow }: { canFollow: boolean }) {
+  const { t } = useTranslation('dashboard');
+  const today = todayBangkok();
+  const q = useQuery({
+    queryKey: ['dashboard-holidays', today],
+    queryFn: () => api.get<HolidayListResponse>('/calendar/holidays', { from: today, to: addDays(today, 30) }),
+    staleTime: 10 * 60_000,
+  });
+  const list = q.data?.holidays ?? [];
+  const todays = list.find((h) => h.date === today);
+  const next = list.find((h) => h.date > today);
+  if (!todays && !next) return null;
+  const text = todays
+    ? t('holiday.today', { name: holidayName(todays) })
+    : t('holiday.next', { name: holidayName(next!), date: fmtShortDate(next!.date), count: daysBetween(today, next!.date) });
+  const cls = `dash-holiday${todays ? ' dash-holiday-today' : ''}`;
+  const body = (
+    <>
+      <Icon name="holidays" size={15} />
+      <span>{text}</span>
+    </>
+  );
+  return canFollow ? (
+    <Link to="/holidays" className={cls} title={t('holiday.link')}>
+      {body}
+    </Link>
+  ) : (
+    <p className={cls}>{body}</p>
   );
 }
 

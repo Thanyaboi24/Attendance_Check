@@ -152,6 +152,12 @@ export function HistoryScreen() {
             <TimeColumn title={t('in')} time={item.inTime} label={item.inLabel} />
             <TimeColumn title={t('out')} time={item.outTime} label={item.outLabel} />
           </View>
+          {item.workedLabel ? (
+            <View style={styles.worked}>
+              <MaterialCommunityIcons name="timer-outline" size={18} color={palette.textSoft} />
+              <Text style={styles.workedText}>{item.workedLabel}</Text>
+            </View>
+          ) : null}
           {item.needsCorrection ? (
             <Pressable onPress={() => openCorrection(item)} accessibilityRole="link" hitSlop={8}>
               <Text style={styles.link}>{t('requestCorrection')}</Text>
@@ -190,4 +196,6 @@ const styles = StyleSheet.create({
   time: { fontSize: 24, color: palette.text },
   method: { fontSize: 14, fontWeight: '600', color: palette.blue },
   link: { fontSize: 17, fontWeight: '700', color: palette.blue },
+  worked: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingTop: 12, borderTopWidth: 1, borderTopColor: palette.border },
+  workedText: { fontSize: 15, fontWeight: '600', color: palette.textSoft },
 });

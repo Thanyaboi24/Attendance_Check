@@ -4,7 +4,7 @@
  *
  * Every error carries a string `kind` so checks do not depend on `instanceof` across bundles/realms.
  */
-import { INSTITUTIONAL_EMAIL_DOMAINS_TEXT, INSTITUTIONAL_EMAIL_MESSAGE } from '@attendance/shared';
+import { ErrorCode, type HolidayDto, HolidayDtoSchema, INSTITUTIONAL_EMAIL_DOMAINS_TEXT, INSTITUTIONAL_EMAIL_MESSAGE } from '@attendance/shared';
 import { i18n, t } from '../i18n';
 
 export class ApiRequestError extends Error {
@@ -79,6 +79,21 @@ export function isRetryable(e: unknown): boolean {
   if (isNetworkError(e) || isAuthError(e)) return true;
   if (isApiError(e)) return e.status >= 500 || e.status === 408 || e.status === 429;
   return false;
+}
+
+/**
+ * 422 HOLIDAY_CHECK_IN_CLOSED: today is a holiday, so the backend refuses check-in. This is a definitive answer
+ * ("closed for the holiday"), not a failure: it is never retried and never shown as an error.
+ */
+export function isHolidayClosedError(e: unknown): boolean {
+  return isApiError(e) && e.code === ErrorCode.HOLIDAY_CHECK_IN_CLOSED;
+}
+
+/** The holiday sent in `details.holiday` of a HOLIDAY_CHECK_IN_CLOSED error (null when missing or malformed). */
+export function holidayOfError(e: unknown): HolidayDto | null {
+  if (!isApiError(e) || !e.details || typeof e.details !== 'object') return null;
+  const parsed = HolidayDtoSchema.safeParse((e.details as { holiday?: unknown }).holiday);
+  return parsed.success ? parsed.data : null;
 }
 
 export function errorMessage(e: unknown): string {

@@ -1,10 +1,11 @@
-import { formatBangkokTime, RequestType } from '@attendance/shared';
+import { formatBangkokTime, type HolidayDto, RequestType } from '@attendance/shared';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, View } from 'react-native';
 import { Button, Text } from 'react-native-paper';
 import Svg, { Circle } from 'react-native-svg';
 import { palette } from '../../app/theme';
+import { holidayName } from '../../domain/holidays';
 import type { LocalRequest } from '../../domain/models';
 import { countdown, shortRequestId } from '../locationMap/locationModel';
 
@@ -42,14 +43,16 @@ interface Props {
   request: LocalRequest;
   busy: boolean;
   onConfirm(): void;
+  /** Today's holiday: a pending check-in cannot be confirmed (check-in is closed); check-out is unaffected. */
+  holiday?: HolidayDto | null;
 }
 
 /**
  * Pending check-in / check-out (mockup page 4, design §12.4). The countdown is informative only: the decision at
  * the deadline is taken by the background task after a fresh location check, never by this timer.
  */
-export function PendingRequestCard({ request, busy, onConfirm }: Props) {
-  const { t } = useTranslation('dashboard');
+export function PendingRequestCard({ request, busy, onConfirm, holiday }: Props) {
+  const { t, i18n } = useTranslation('dashboard');
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 1000);
@@ -59,6 +62,7 @@ export function PendingRequestCard({ request, busy, onConfirm }: Props) {
   const isIn = request.type === RequestType.CHECK_IN;
   const cd = countdown(request.notificationPostedAt ?? request.geofenceDetectedAt, request.deadlineAt, now);
   const notifFailed = request.notificationStatus === 'FAILED';
+  const locked = isIn && holiday != null;
   let headline: string = t('pending.waiting');
   let detail: string = t(isIn ? 'pending.autoIn' : 'pending.autoOut', { time: formatBangkokTime(request.deadlineAt) });
   if (notifFailed) {
@@ -88,18 +92,38 @@ export function PendingRequestCard({ request, busy, onConfirm }: Props) {
         <Text style={styles.warn}>{t('pending.notVerified')}</Text>
       ) : null}
 
-      <Button
-        mode="contained"
-        onPress={onConfirm}
-        loading={busy}
-        disabled={busy}
-        style={styles.button}
-        contentStyle={styles.buttonContent}
-        labelStyle={styles.buttonLabel}
-      >
-        {isIn ? t('pending.checkInNow') : t('pending.checkOutNow')}
-      </Button>
-      <Text style={styles.muted}>{t('pending.dismissNote')}</Text>
+      {locked ? (
+        <>
+          <Button
+            mode="contained"
+            icon="lock"
+            disabled
+            onPress={() => undefined}
+            style={styles.button}
+            contentStyle={styles.buttonContent}
+            labelStyle={styles.buttonLabel}
+            accessibilityHint={t('holiday.locked')}
+          >
+            {t('pending.holidayLocked')}
+          </Button>
+          <Text style={styles.holidayNote}>{t('pending.holidayNote', { name: holidayName(holiday, i18n.language === 'th' ? 'th' : 'en') })}</Text>
+        </>
+      ) : (
+        <>
+          <Button
+            mode="contained"
+            onPress={onConfirm}
+            loading={busy}
+            disabled={busy}
+            style={styles.button}
+            contentStyle={styles.buttonContent}
+            labelStyle={styles.buttonLabel}
+          >
+            {isIn ? t('pending.checkInNow') : t('pending.checkOutNow')}
+          </Button>
+          <Text style={styles.muted}>{t('pending.dismissNote')}</Text>
+        </>
+      )}
     </View>
   );
 }
@@ -115,6 +139,7 @@ const styles = StyleSheet.create({
   headline: { fontSize: 19, fontWeight: '700', color: palette.text },
   detail: { fontSize: 15, lineHeight: 21, color: palette.textSoft },
   warn: { fontSize: 13, color: '#DC2626' },
+  holidayNote: { fontSize: 13, lineHeight: 19, color: '#9F1239' },
   button: { borderRadius: 14 },
   buttonContent: { height: 54 },
   buttonLabel: { fontSize: 18, fontWeight: '700' },

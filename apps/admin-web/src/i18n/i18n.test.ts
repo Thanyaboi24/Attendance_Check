@@ -61,6 +61,14 @@ describe('Thai resources', () => {
       'คำขอลงทะเบียนนี้ได้รับการพิจารณาแล้ว',
     );
     expect(enumLabel('accountStatus', 'PENDING_APPROVAL')).toBe('รออนุมัติ');
+    expect(enumLabel('holidayType', 'SUBSTITUTE')).toBe('วันหยุดชดเชย');
+    expect(enumLabel('auditAction', 'HOLIDAY_CREATED')).toBe('เพิ่มวันหยุด');
+    expect(errorMessage(new ApiRequestError(409, 'HOLIDAY_EXISTS', 'There is already a holiday on this date'))).toBe(
+      'มีวันหยุดในวันที่นี้อยู่แล้ว',
+    );
+    expect(errorMessage(new ApiRequestError(409, 'HOLIDAY_CHECK_IN_CLOSED', 'Closed'))).toBe(
+      'วันนี้เป็นวันหยุด จึงปิดการลงเวลาเข้า ส่วนการลงเวลาออกยังทำได้ตามปกติ',
+    );
     expect(errorMessage(new ApiRequestError(418, 'TEAPOT', 'I am a teapot'))).toBe('I am a teapot');
   });
 });

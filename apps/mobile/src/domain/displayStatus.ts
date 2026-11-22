@@ -54,6 +54,8 @@ const REASON_CODES = [
   'SUPERSEDED',
   'LOCATION_NOT_CONFIRMED',
   'CONFIG_VERSION_UNKNOWN',
+  'HOLIDAY',
+  'HOLIDAY_CHECK_IN_CLOSED',
 ] as const;
 type ReasonCode = (typeof REASON_CODES)[number];
 const isReasonCode = (c: string): c is ReasonCode => (REASON_CODES as readonly string[]).includes(c);

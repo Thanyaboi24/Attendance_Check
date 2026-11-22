@@ -36,6 +36,7 @@ export default {
     reports: 'รายงาน',
     users: 'ผู้ใช้งาน',
     geofence: 'พื้นที่ลงเวลา',
+    holidays: 'วันหยุด',
     auditLog: 'บันทึกการตรวจสอบ',
   },
   role: {
@@ -105,6 +106,8 @@ export default {
     CONFIG_VERSION_UNKNOWN: 'ไม่รู้จักเวอร์ชันการตั้งค่าพื้นที่ลงเวลานี้',
     CORRECTION_NOT_PENDING: 'คำขอแก้ไขเวลานี้ได้รับการตรวจสอบแล้ว',
     INVALID_TIME_RANGE: 'ช่วงเวลาไม่ถูกต้อง',
+    HOLIDAY_CHECK_IN_CLOSED: 'วันนี้เป็นวันหยุด จึงปิดการลงเวลาเข้า ส่วนการลงเวลาออกยังทำได้ตามปกติ',
+    HOLIDAY_EXISTS: 'มีวันหยุดในวันที่นี้อยู่แล้ว',
     DUPLICATE_USER: 'มีผู้ใช้งานที่ใช้อีเมลหรือรหัสบุคลากรนี้อยู่แล้ว',
     CONFLICT: 'ข้อมูลถูกเปลี่ยนแปลงโดยผู้อื่น โปรดรีเฟรชแล้วลองอีกครั้ง',
     RATE_LIMITED: 'มีคำขอมากเกินไป โปรดรอสักครู่แล้วลองอีกครั้ง',
@@ -196,6 +199,9 @@ export default {
       USER_SIGNUP_RESUBMITTED: 'ส่งคำขอลงทะเบียนอีกครั้ง',
       SIGNUP_APPROVED: 'อนุมัติคำขอลงทะเบียน',
       SIGNUP_REJECTED: 'ไม่อนุมัติคำขอลงทะเบียน',
+      HOLIDAY_CREATED: 'เพิ่มวันหยุด',
+      HOLIDAY_UPDATED: 'แก้ไขวันหยุด',
+      HOLIDAY_DELETED: 'ลบวันหยุด',
     },
     entityType: {
       AttendanceSession: 'รอบการลงเวลา',
@@ -203,6 +209,14 @@ export default {
       CorrectionRequest: 'คำขอแก้ไขเวลา',
       User: 'ผู้ใช้งาน',
       GeofenceConfig: 'การตั้งค่าพื้นที่ลงเวลา',
+      Holiday: 'วันหยุด',
+    },
+    holidayType: {
+      PUBLIC: 'วันหยุดนักขัตฤกษ์',
+      SUBSTITUTE: 'วันหยุดชดเชย',
+      GOVERNMENT: 'วันหยุดราชการ',
+      SPECIAL: 'วันหยุดพิเศษ',
+      UNIVERSITY: 'วันหยุดของมหาวิทยาลัย',
     },
     actorType: {
       SYSTEM: 'ระบบ',

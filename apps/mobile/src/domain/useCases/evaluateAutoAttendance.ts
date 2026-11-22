@@ -14,7 +14,8 @@ import {
   type UnresolvedReasonInput,
 } from '@attendance/shared';
 import { t } from '../../i18n';
-import { errorMessage, isLocationError } from '../errors';
+import { errorMessage, holidayOfError, isHolidayClosedError, isLocationError } from '../errors';
+import { holidayToday } from '../holidays';
 import type { AppDeps } from '../ports';
 import {
   getConfigForVersion,
@@ -27,6 +28,7 @@ import {
   toEvidenceInput,
   toPendingView,
 } from './common';
+import { closeRequestForHoliday, HOLIDAY_REASON, holidayMessage, notifyHolidayClosed } from './holidayClosed';
 import { type DecisionOutcome, submitDecision } from './submitDecision';
 
 export type AutoOutcome =
@@ -230,6 +232,11 @@ async function finish(
         'UNCERTAIN_LOCATION',
       );
     }
+    if (isHolidayClosedError(error)) {
+      const holiday = holidayOfError(error);
+      await closeRequestForHoliday(deps, requestId, holiday, 'AUTO');
+      await notifyHolidayClosed(deps, holiday, requestId);
+    }
     return { kind: 'ERROR', code: error.code };
   }
 
@@ -273,6 +280,8 @@ async function notifyOutcome(
   } else if (result?.status === RequestStatus.APPROVED) {
     title = t(`notifications:result.${what}.recordedTitle`);
     body = t(`notifications:result.${what}.recordedBody`, { time: result.officialTime ? formatBangkokTime(result.officialTime) : '—' });
+  } else if (result?.status === RequestStatus.CANCELLED && result.reason === HOLIDAY_REASON) {
+    ({ title, body } = holidayMessage(await holidayToday(deps)));
   } else if (result?.status === RequestStatus.CANCELLED || action === 'CANCEL') {
     title = t(`notifications:result.${what}.cancelledTitle`);
     body = t(`notifications:result.${what}.cancelledBody`);

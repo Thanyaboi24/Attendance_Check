@@ -15,4 +15,5 @@ export default {
   in: 'เข้า',
   out: 'ออก',
   requestCorrection: 'ขอแก้ไขเวลา',
+  worked: 'ทำงาน {{duration}}',
 } satisfies Messages<typeof en>;

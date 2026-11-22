@@ -8,7 +8,7 @@ import { ErrorCode } from '@attendance/shared';
 import { api, ApiRequestError, errorMessage } from '../api/client';
 import { FieldError } from '../components/ui';
 import { t } from '../i18n';
-import { LanguageSwitch } from '../i18n/LanguageSwitch';
+import { AuthShell, IconInput, PasswordInput } from '../components/AuthShell';
 import { emailField, msg } from '../lib/validation';
 
 /** Same rule as the shared `ForgotPasswordRequestSchema`, with a translated message. */
@@ -39,11 +39,8 @@ export function ForgotPasswordPage() {
   });
 
   return (
-    <div className="auth-page">
-      <form className="card auth-card" onSubmit={onSubmit} noValidate>
-        <div className="auth-lang">
-          <LanguageSwitch />
-        </div>
+    <AuthShell>
+      <form className="auth-form" onSubmit={onSubmit} noValidate>
         <h1>{t('forgot.title')}</h1>
         {sent ? (
           <div className="alert alert-success" role="status">
@@ -51,14 +48,14 @@ export function ForgotPasswordPage() {
           </div>
         ) : (
           <>
-            <p className="muted">{t('forgot.intro')}</p>
+            <p className="auth-subtitle">{t('forgot.intro')}</p>
             {error ? <div className="alert alert-error">{errorMessage(error)}</div> : null}
-            <label className="field">
+            <label className="field auth-field">
               <span>{t('email')}</span>
-              <input type="email" autoComplete="email" {...register('email')} />
+              <IconInput icon="mail" type="email" autoComplete="email" placeholder={t('emailPlaceholder')} {...register('email')} />
               <FieldError message={errors.email?.message} />
             </label>
-            <button type="submit" className="btn btn-primary btn-block" disabled={isSubmitting}>
+            <button type="submit" className="auth-submit" disabled={isSubmitting}>
               {t('forgot.submit')}
             </button>
           </>
@@ -67,7 +64,7 @@ export function ForgotPasswordPage() {
           <Link to="/login">{t('forgot.backToSignIn')}</Link>
         </p>
       </form>
-    </div>
+    </AuthShell>
   );
 }
 
@@ -124,11 +121,8 @@ export function SetPasswordPage({ mode }: { mode: 'activate' | 'reset' }) {
     : null;
 
   return (
-    <div className="auth-page">
-      <form className="card auth-card" onSubmit={onSubmit} noValidate>
-        <div className="auth-lang">
-          <LanguageSwitch />
-        </div>
+    <AuthShell>
+      <form className="auth-form" onSubmit={onSubmit} noValidate>
         <h1>{title}</h1>
         {!token || token.length < 16 ? (
           <div className="alert alert-error" role="alert">
@@ -146,9 +140,9 @@ export function SetPasswordPage({ mode }: { mode: 'activate' | 'reset' }) {
                 {errorText}
               </div>
             ) : null}
-            <label className="field">
+            <label className="field auth-field">
               <span>{t('setPassword.newPassword')}</span>
-              <input type="password" autoComplete="new-password" {...register('password')} />
+              <PasswordInput autoComplete="new-password" {...register('password')} />
               <FieldError message={errors.password?.message} />
             </label>
             <ul className="hints" aria-label={t('setPassword.requirements')}>
@@ -158,12 +152,12 @@ export function SetPasswordPage({ mode }: { mode: 'activate' | 'reset' }) {
                 </li>
               ))}
             </ul>
-            <label className="field">
+            <label className="field auth-field">
               <span>{t('setPassword.confirmPassword')}</span>
-              <input type="password" autoComplete="new-password" {...register('confirm')} />
+              <PasswordInput autoComplete="new-password" {...register('confirm')} />
               <FieldError message={errors.confirm?.message} />
             </label>
-            <button type="submit" className="btn btn-primary btn-block" disabled={isSubmitting}>
+            <button type="submit" className="auth-submit" disabled={isSubmitting}>
               {mode === 'activate' ? t('setPassword.activateSubmit') : t('setPassword.resetSubmit')}
             </button>
           </>
@@ -174,6 +168,6 @@ export function SetPasswordPage({ mode }: { mode: 'activate' | 'reset' }) {
           </Link>
         </p>
       </form>
-    </div>
+    </AuthShell>
   );
 }

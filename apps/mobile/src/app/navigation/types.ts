@@ -3,6 +3,8 @@ import type { NavigatorScreenParams } from '@react-navigation/native';
 export type MainTabParamList = {
   Dashboard: undefined;
   History: undefined;
+  Hours: undefined;
+  Calendar: undefined;
   Requests: undefined;
 };
 

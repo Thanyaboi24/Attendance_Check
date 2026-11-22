@@ -1,3 +1,4 @@
+import { holidayToday } from '../../domain/holidays';
 import { getActiveConfig, getLocalView } from '../../domain/useCases/common';
 import type { AppDeps } from '../../domain/ports';
 import type { DashboardModel } from '../../store/appStore';
@@ -19,5 +20,6 @@ export async function loadDashboardModel(deps: Pick<AppDeps, 'store' | 'api' | '
     failedOutboxCount: outbox.filter((e) => e.status === 'FAILED').length,
     config: await getActiveConfig(deps, { refresh: false }),
     snapshotFetchedAt: view.snapshot?.fetchedAt ?? null,
+    todayHoliday: await holidayToday(deps),
   };
 }

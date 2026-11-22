@@ -7,7 +7,7 @@ import { Empty, ErrorBox, JsonView, Loading, PageHeader, Pagination } from '../c
 import { enumLabel, fmtDateTime } from '../lib/format';
 
 const PAGE_SIZE = 50;
-const ENTITY_TYPES = ['AttendanceSession', 'AttendanceRequest', 'CorrectionRequest', 'User', 'GeofenceConfig'];
+const ENTITY_TYPES = ['AttendanceSession', 'AttendanceRequest', 'CorrectionRequest', 'User', 'GeofenceConfig', 'Holiday'];
 
 export function AuditLogPage() {
   const { t } = useTranslation(['audit', 'common']);

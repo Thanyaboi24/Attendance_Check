@@ -13,6 +13,8 @@ import { CorrectionScreen } from '../../features/correction/CorrectionScreen';
 import { DashboardScreen } from '../../features/dashboard/DashboardScreen';
 import { RequestsScreen } from '../../features/correction/RequestsScreen';
 import { HistoryScreen } from '../../features/history/HistoryScreen';
+import { HoursScreen } from '../../features/hours/HoursScreen';
+import { CalendarScreen } from '../../features/calendar/CalendarScreen';
 import { LocationMapScreen } from '../../features/locationMap/LocationMapScreen';
 import { OnboardingScreen } from '../../features/onboarding/OnboardingScreen';
 import { PermissionSetupScreen } from '../../features/onboarding/PermissionSetupScreen';
@@ -28,7 +30,7 @@ const tabIcon =
   (name: React.ComponentProps<typeof MaterialCommunityIcons>['name']) =>
   ({ color, size }: { color: string; size: number }) => <MaterialCommunityIcons name={name} color={color} size={size} />;
 
-/** Home · History · Requests (mockups pages 3–6). Each tab draws its own title, so tab headers are hidden. */
+/** Home · History · Hours · Calendar · Requests (mockups pages 3–6 + holiday calendar). Each tab draws its own title, so tab headers are hidden. */
 function MainTabs() {
   const { t } = useTranslation();
   return (
@@ -37,12 +39,14 @@ function MainTabs() {
         headerShown: false,
         tabBarActiveTintColor: palette.blue,
         tabBarInactiveTintColor: palette.textSoft,
-        tabBarLabelStyle: { fontSize: 13, fontWeight: '600' },
+        tabBarLabelStyle: { fontSize: 12, fontWeight: '600' },
         tabBarStyle: { paddingTop: 6, backgroundColor: palette.surface, borderTopColor: palette.border },
       }}
     >
       <Tabs.Screen name="Dashboard" component={DashboardScreen} options={{ title: t('tabs.home'), tabBarIcon: tabIcon('home-outline') }} />
       <Tabs.Screen name="History" component={HistoryScreen} options={{ title: t('tabs.history'), tabBarIcon: tabIcon('calendar-blank-outline') }} />
+      <Tabs.Screen name="Hours" component={HoursScreen} options={{ title: t('tabs.hours'), tabBarIcon: tabIcon('clock-time-four-outline') }} />
+      <Tabs.Screen name="Calendar" component={CalendarScreen} options={{ title: t('tabs.calendar'), tabBarIcon: tabIcon('calendar-star') }} />
       <Tabs.Screen name="Requests" component={RequestsScreen} options={{ title: t('tabs.requests'), tabBarIcon: tabIcon('pencil-outline') }} />
     </Tabs.Navigator>
   );

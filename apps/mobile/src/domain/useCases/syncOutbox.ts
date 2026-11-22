@@ -1,5 +1,14 @@
 import { type AttendanceActionResult, type AttendanceRequestDto, SyncStatus } from '@attendance/shared';
-import { type ApiRequestError, errorMessage, isApiError, isAuthError, isNetworkError, isRetryable } from '../errors';
+import {
+  type ApiRequestError,
+  errorMessage,
+  holidayOfError,
+  isApiError,
+  isAuthError,
+  isHolidayClosedError,
+  isNetworkError,
+  isRetryable,
+} from '../errors';
 import type { OutboxEntry } from '../models';
 import type { AppDeps } from '../ports';
 import {
@@ -14,6 +23,7 @@ import {
   refreshState,
   safe,
 } from './common';
+import { closeRequestForHoliday, notifyHolidayClosed } from './holidayClosed';
 
 export const OUTBOX_BACKOFF = { baseMs: 5_000, maxMs: 15 * 60_000 } as const;
 
@@ -172,12 +182,20 @@ async function onSent(deps: AppDeps, entry: OutboxEntry, response: unknown): Pro
  * - create 409/404/400 → the request is REJECTED locally; its queued actions are dropped (they can never succeed).
  * - confirm/cancel 422 LOCATION_NOT_CONFIRMED → the request is still ACTIVE on the backend (the stored evidence
  *   was stale by the time it arrived); the queued decision is cleared and the grace job re-evaluates with a new fix.
+ * - 422 HOLIDAY_CHECK_IN_CLOSED (create/confirm/auto of a check-in on a holiday) → the request is closed as
+ *   CANCELLED (reason HOLIDAY) and its queued entries are dropped: it is never retried.
  * - anything else → the request is marked FAILED (UI "Failed").
  */
 async function onRejected(deps: AppDeps, entry: OutboxEntry, e: ApiRequestError): Promise<boolean> {
   await logEvent(deps, 'OUTBOX_FAILED', entry.requestId, { kind: entry.kind, status: e.status, code: e.code });
   if (!entry.requestId || entry.kind === 'NOTIFICATION_EVENT') return false;
 
+  if (isHolidayClosedError(e)) {
+    const holiday = holidayOfError(e);
+    await closeRequestForHoliday(deps, entry.requestId, holiday, 'SYNC');
+    await notifyHolidayClosed(deps, holiday, entry.requestId);
+    return true;
+  }
   if (entry.kind === 'CREATE_REQUEST') {
     await markRequestRefused(deps, entry.requestId, e);
     return true;

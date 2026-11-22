@@ -10,7 +10,15 @@ const dir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../.loca
 const port = Number(process.env.LOCAL_PG_PORT ?? 5433);
 const fresh = !existsSync(dir);
 
-const pg = new EmbeddedPostgres({ databaseDir: dir, user: 'postgres', password: 'postgres', port, persistent: true });
+// UTF-8 explicitly: on Windows initdb otherwise picks the ANSI code page (WIN1252), which cannot store Thai.
+const pg = new EmbeddedPostgres({
+  databaseDir: dir,
+  user: 'postgres',
+  password: 'postgres',
+  port,
+  persistent: true,
+  initdbFlags: ['--encoding=UTF8', '--locale=C'],
+});
 if (fresh) await pg.initialise();
 await pg.start();
 if (fresh) await pg.createDatabase('attendance');

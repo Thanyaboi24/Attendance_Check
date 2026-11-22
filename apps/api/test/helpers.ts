@@ -65,7 +65,7 @@ export async function createTestApp(): Promise<TestContext> {
 /** Empty every table and create geofence v1 (150 m, 300 s grace, 60 s age, 30 m accuracy). */
 export async function resetDb(prisma: PrismaClient) {
   await prisma.$executeRawUnsafe(
-    'TRUNCATE "AuditLog","NotificationEvent","LocationEvidence","CorrectionRequest","AttendanceRequest","AttendanceSession","GeofenceConfiguration","ActionToken","RefreshToken","User" RESTART IDENTITY CASCADE',
+    'TRUNCATE "AuditLog","NotificationEvent","LocationEvidence","CorrectionRequest","AttendanceRequest","AttendanceSession","GeofenceConfiguration","ActionToken","RefreshToken","Holiday","User" RESTART IDENTITY CASCADE',
   );
   await prisma.geofenceConfiguration.create({
     data: {

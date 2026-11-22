@@ -13,6 +13,12 @@ export default {
   live: 'อัปเดตอัตโนมัติ',
   updated: 'ล่าสุด {{time}} น.',
   refresh: 'รีเฟรช',
+  holiday: {
+    today: 'วันนี้เป็นวันหยุด: {{name}} — ปิดการลงเวลาเข้า',
+    next_one: 'วันหยุดถัดไป: {{name}} {{date}} (อีก {{count}} วัน)',
+    next_other: 'วันหยุดถัดไป: {{name}} {{date}} (อีก {{count}} วัน)',
+    link: 'ปฏิทินวันหยุด',
+  },
   presence: {
     title: 'อยู่ในพื้นที่ขณะนี้',
     ring: 'ลงเวลาเข้าแล้ว {{now}} จาก {{total}} คน',

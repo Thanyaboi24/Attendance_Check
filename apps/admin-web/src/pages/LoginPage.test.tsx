@@ -84,4 +84,17 @@ describe('Login', () => {
     expect(await screen.findByText('Enter a valid email address')).toBeInTheDocument();
     expect(m.calls).toHaveLength(0);
   });
+
+  it('shows and hides the password with the eye button', async () => {
+    mockApi({});
+    renderApp('/login');
+    const user = userEvent.setup();
+    const input = screen.getByLabelText('Password');
+    expect(input).toHaveAttribute('type', 'password');
+    await user.click(screen.getByRole('button', { name: 'Show password' }));
+    expect(input).toHaveAttribute('type', 'text');
+    await user.click(screen.getByRole('button', { name: 'Hide password' }));
+    expect(input).toHaveAttribute('type', 'password');
+    expect(screen.getByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
+  });
 });

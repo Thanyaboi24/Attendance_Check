@@ -1,4 +1,4 @@
-import type { AttendanceState, GeofenceConfig, LocationClass, SessionDto, UserProfile } from '@attendance/shared';
+import type { AttendanceState, GeofenceConfig, HolidayDto, LocationClass, SessionDto, UserProfile } from '@attendance/shared';
 import { create } from 'zustand';
 import type { LocalRequest } from '../domain/models';
 import type { MonitoringStatus } from '../domain/useCases/monitoring';
@@ -18,6 +18,8 @@ export interface DashboardModel {
   failedOutboxCount: number;
   config: GeofenceConfig | null;
   snapshotFetchedAt: string | null;
+  /** Today's holiday (server state, or the cached calendar offline): check-in is closed. */
+  todayHoliday: HolidayDto | null;
 }
 
 export interface LastFix {

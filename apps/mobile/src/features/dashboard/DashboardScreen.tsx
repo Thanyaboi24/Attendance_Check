@@ -18,6 +18,7 @@ import { LocationCard } from '../locationMap/LocationCard';
 import { autoRequirementNote } from '../locationMap/locationModel';
 import { useDisplayFix } from '../locationMap/useDisplayFix';
 import { ConfirmResultDialog } from './ConfirmResultDialog';
+import { HolidayBanner } from './HolidayBanner';
 import { PendingRequestCard } from './PendingRequestCard';
 import { buildTodayTimeline, type TimelineTone } from './timelineModel';
 import { useConfirmFlow } from './useConfirmFlow';
@@ -125,6 +126,8 @@ export function DashboardScreen() {
   const timeline = buildTodayTimeline(model.recent, model.todaySessions, now);
   const look = STATE_LOOK[model.state];
   const checkedIn = model.state === AttendanceState.CHECKED_IN;
+  // Holiday today (server state, or the cached calendar offline): check-in is closed; check-out still works.
+  const holiday = model.todayHoliday?.date === today ? model.todayHoliday : null;
 
   return (
     <ScrollView
@@ -147,8 +150,15 @@ export function DashboardScreen() {
 
       <MonitoringBanner status={monitoring} onFix={() => navigation.navigate('Permissions')} />
 
+      {holiday ? <HolidayBanner holiday={holiday} onCalendar={() => navigation.navigate('Main', { screen: 'Calendar' })} /> : null}
+
       {pending ? (
-        <PendingRequestCard request={pending} busy={confirm.state.busy} onConfirm={() => void confirm.run(pending.requestId, 'DASHBOARD')} />
+        <PendingRequestCard
+          request={pending}
+          busy={confirm.state.busy}
+          holiday={holiday}
+          onConfirm={() => void confirm.run(pending.requestId, 'DASHBOARD')}
+        />
       ) : (
         <Panel style={{ gap: 16 }}>
           <View style={styles.rowBetween}>
