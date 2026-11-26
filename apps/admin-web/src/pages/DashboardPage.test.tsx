@@ -1,7 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { addDays, Role, type DashboardSummary, type HolidayDto } from '@attendance/shared';
+import { addDays, Role, type CorrectionDto, type DashboardSummary, type HolidayDto } from '@attendance/shared';
 import { makeUser, mockApi, renderApp } from '../test/utils';
 
 const base: DashboardSummary = {
@@ -17,13 +17,31 @@ const base: DashboardSummary = {
   longOpenSessions: 1,
 };
 
-function open(role: Role, summary = base, holidays?: (from: string) => HolidayDto[]) {
-  mockApi({
+const correction: CorrectionDto = {
+  id: 'c1',
+  user: { id: 'u1', fullName: 'Somchai Jaidee', staffId: 'S001', department: 'ICT' },
+  sessionId: null,
+  workDate: '2026-11-13',
+  requestedCheckInAt: '2026-11-13T01:30:00.000Z', // 08:30 Bangkok
+  requestedCheckOutAt: '2026-11-13T10:00:00.000Z', // 17:00 Bangkok
+  reason: 'Phone battery died before I left campus',
+  status: 'PENDING',
+  reviewNote: null,
+  reviewer: null,
+  reviewedAt: null,
+  createdAt: '2026-11-13T12:00:00.000Z',
+};
+
+function open(role: Role, summary = base, holidays?: (from: string) => HolidayDto[], corrections: CorrectionDto[] = []) {
+  const api = mockApi({
     'GET /me': { body: makeUser(role) },
     'GET /admin/dashboard/summary': { body: summary },
+    'GET /admin/corrections': { body: { items: corrections, total: corrections.length, page: 1, pageSize: 5 } },
+    'POST /admin/corrections/c1/review': (req) => ({ body: { ...correction, status: (req.body as { decision: string }).decision === 'APPROVE' ? 'APPROVED' : 'REJECTED' } }),
     ...(holidays ? { 'GET /calendar/holidays': (req) => ({ body: { holidays: holidays(req.query.get('from')!) } }) } : {}),
   });
   renderApp('/dashboard', { signedIn: true });
+  return api;
 }
 
 describe('Dashboard', () => {
@@ -93,5 +111,58 @@ describe('Dashboard', () => {
     const chip = await screen.findByRole('link', { name: /^Next holiday: New Year, .+ \(in 3 days\)$/ });
     expect(chip).toHaveAttribute('href', '/holidays');
     expect(today).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
+  describe('pending corrections', () => {
+    it('lists requests awaiting a decision and approves one from the dashboard', async () => {
+      const api = open(Role.ATTENDANCE_ADMIN, { ...base, pendingCorrections: 1 }, undefined, [correction]);
+      const panel = await screen.findByRole('region', { name: /Pending corrections/ });
+      expect(within(panel).getByText('Awaiting a decision')).toBeInTheDocument();
+      expect(await within(panel).findByText('Somchai Jaidee')).toBeInTheDocument();
+      expect(within(panel).getByText('Phone battery died before I left campus')).toBeInTheDocument();
+      expect(within(panel).getByText('08:30')).toBeInTheDocument();
+      expect(within(panel).getByText('17:00')).toBeInTheDocument();
+      expect(api.find('GET', '/admin/corrections')[0]!.query.get('status')).toBe('PENDING');
+
+      const user = userEvent.setup();
+      await user.click(within(panel).getByRole('button', { name: 'Approve the correction from Somchai Jaidee' }));
+      const dialog = await screen.findByRole('dialog', { name: 'Review correction' });
+      expect(within(dialog).getByRole('radio', { name: 'Approve' })).toBeChecked();
+      await user.type(within(dialog).getByRole('textbox', { name: 'Review note' }), 'Confirmed with the department');
+      await user.click(within(dialog).getByRole('button', { name: 'Approve' }));
+      await vi.waitFor(() => expect(api.find('POST', '/admin/corrections/c1/review')).toHaveLength(1));
+      expect(api.find('POST', '/admin/corrections/c1/review')[0]!.body).toMatchObject({
+        decision: 'APPROVE',
+        note: 'Confirmed with the department',
+        checkInAt: '2026-11-13T01:30:00.000Z',
+        checkOutAt: '2026-11-13T10:00:00.000Z',
+      });
+      await vi.waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    });
+
+    it('opens the review with Reject selected', async () => {
+      const api = open(Role.ATTENDANCE_ADMIN, { ...base, pendingCorrections: 1 }, undefined, [correction]);
+      const panel = await screen.findByRole('region', { name: /Pending corrections/ });
+      const user = userEvent.setup();
+      await user.click(await within(panel).findByRole('button', { name: 'Reject the correction from Somchai Jaidee' }));
+      const dialog = await screen.findByRole('dialog', { name: 'Review correction' });
+      expect(within(dialog).getByRole('radio', { name: 'Reject' })).toBeChecked();
+      await user.type(within(dialog).getByRole('textbox', { name: 'Review note' }), 'No record of you on campus');
+      await user.click(within(dialog).getByRole('button', { name: 'Reject' }));
+      await vi.waitFor(() => expect(api.find('POST', '/admin/corrections/c1/review')).toHaveLength(1));
+      expect(api.find('POST', '/admin/corrections/c1/review')[0]!.body).toEqual({ decision: 'REJECT', note: 'No record of you on campus' });
+    });
+
+    it('shows an empty state when nothing is waiting', async () => {
+      open(Role.ATTENDANCE_ADMIN);
+      const panel = await screen.findByRole('region', { name: /Pending corrections/ });
+      expect(await within(panel).findByText('No corrections awaiting a decision')).toBeInTheDocument();
+    });
+
+    it('is not shown to a System Administrator, who cannot review corrections', async () => {
+      open(Role.SYSTEM_ADMIN);
+      await screen.findByRole('region', { name: 'Needs attention' });
+      expect(screen.queryByRole('region', { name: /Pending corrections/ })).not.toBeInTheDocument();
+    });
   });
 });

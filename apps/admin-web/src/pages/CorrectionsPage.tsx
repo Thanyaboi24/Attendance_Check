@@ -131,7 +131,16 @@ const ReviewForm = z.object({
 type ReviewForm = z.infer<typeof ReviewForm>;
 
 /** Approve (optionally adjusting the times, entered in Bangkok time) or reject; a note is always required. */
-export function CorrectionReviewDialog({ correction, onClose }: { correction: CorrectionDto; onClose: () => void }) {
+export function CorrectionReviewDialog({
+  correction,
+  onClose,
+  initialDecision = 'APPROVE',
+}: {
+  correction: CorrectionDto;
+  onClose: () => void;
+  /** Preselected decision (the dashboard's Approve / Reject buttons). */
+  initialDecision?: 'APPROVE' | 'REJECT';
+}) {
   const { t } = useTranslation(['corrections', 'common']);
   const qc = useQueryClient();
   const reqIn = isoToBangkokInputs(correction.requestedCheckInAt);
@@ -145,7 +154,7 @@ export function CorrectionReviewDialog({ correction, onClose }: { correction: Co
   } = useForm<ReviewForm>({
     resolver: zodResolver(ReviewForm),
     defaultValues: {
-      decision: 'APPROVE',
+      decision: initialDecision,
       inDate: reqIn.date || correction.workDate,
       inTime: reqIn.time,
       outDate: reqOut.date || correction.workDate,

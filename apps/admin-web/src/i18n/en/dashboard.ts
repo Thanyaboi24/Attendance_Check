@@ -40,6 +40,16 @@ export default {
     allClearHint: 'Nothing is waiting for review.',
     open: 'Open',
   },
+  pendingCorrections: {
+    viewAll: 'View all',
+    empty: 'No corrections awaiting a decision',
+    emptyHint: 'New requests from staff appear here.',
+    submitted: 'Submitted {{time}}',
+    more_one: '{{count}} more request awaiting a decision',
+    more_other: '{{count}} more requests awaiting a decision',
+    approveFor: 'Approve the correction from {{name}}',
+    rejectFor: 'Reject the correction from {{name}}',
+  },
   cards: {
     activeStaff: { label: 'Active staff', hint: 'Accounts with status Active' },
     checkedInNow: { label: 'Checked in now', hint: 'Open attendance sessions' },

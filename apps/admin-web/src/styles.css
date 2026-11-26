@@ -684,7 +684,8 @@ tr.expanded td {
   grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
   grid-template-areas:
     "hero attention"
-    "activity attention";
+    "corrections corrections"
+    "activity activity";
   gap: 1.25rem;
   align-items: start;
 }
@@ -698,10 +699,14 @@ tr.expanded td {
 .dash-activity {
   grid-area: activity;
 }
+.dash-corrections {
+  grid-area: corrections;
+  animation-delay: 0.18s;
+}
 @media (max-width: 1100px) {
   .dash-grid {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-areas: "hero" "attention" "activity";
+    grid-template-areas: "hero" "corrections" "attention" "activity";
   }
 }
 .panel {
@@ -989,6 +994,160 @@ tr.expanded td {
   flex: none;
   color: #94a3b8;
   transition: transform 0.15s, color 0.15s;
+}
+
+/* pending corrections */
+.corr-head {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+.corr-head-text {
+  flex: 1;
+  min-width: 0;
+}
+.corr-head .panel-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.corr-total {
+  min-width: 1.6rem;
+  font-size: 0.8rem;
+  padding: 0.05rem 0.5rem;
+}
+.corr-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--primary);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.corr-skeleton {
+  min-height: 120px;
+  margin-top: 1rem;
+  border-radius: 12px;
+}
+.corr-list {
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.corr-item {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.1fr) minmax(130px, 0.7fr) minmax(0, 1.6fr) auto;
+  grid-template-areas:
+    "who when reason actions"
+    "who when submitted actions";
+  align-items: center;
+  column-gap: 1.1rem;
+  row-gap: 0.15rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--border);
+  border-left: 4px solid #f59e0b;
+  border-radius: 12px;
+  background: #fffdf7;
+}
+.corr-who {
+  grid-area: who;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  min-width: 0;
+}
+.corr-avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #eedff4;
+  color: #5c2373;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+.corr-who-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.corr-who-text strong,
+.corr-who-text .small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.corr-when {
+  grid-area: when;
+  display: flex;
+  flex-direction: column;
+}
+.corr-date {
+  font-weight: 600;
+}
+.corr-times {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #475569;
+  font-variant-numeric: tabular-nums;
+}
+.corr-reason {
+  grid-area: reason;
+  margin: 0;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.corr-submitted {
+  grid-area: submitted;
+}
+.corr-actions {
+  grid-area: actions;
+  display: flex;
+  gap: 0.5rem;
+}
+.corr-actions .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.corr-actions .btn-danger-outline:hover:not(:disabled) {
+  background: #fef2f2;
+}
+.corr-more {
+  display: inline-block;
+  margin-top: 0.8rem;
+  color: var(--primary);
+  font-weight: 600;
+  text-decoration: none;
+}
+.corr-more:hover {
+  text-decoration: underline;
+}
+@media (max-width: 900px) {
+  .corr-item {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "who when"
+      "reason reason"
+      "submitted submitted"
+      "actions actions";
+    row-gap: 0.5rem;
+  }
+  .corr-when {
+    align-items: flex-end;
+  }
+  .corr-actions .btn {
+    flex: 1;
+    justify-content: center;
+  }
 }
 
 /* activity */

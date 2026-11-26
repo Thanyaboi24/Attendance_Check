@@ -95,8 +95,10 @@ export function PermissionSetupScreen() {
     try {
       const deps = await getDeps();
       await deps.store.setMeta(META_ONBOARDED, '1');
-      await refreshMonitoring(true).catch(() => undefined);
       useAppStore.getState().setOnboarded(true);
+      // Registering the geofences downloads the attendance area first; when the server is slow or unreachable
+      // that can take up to the request timeout. Do it in the background so the button responds at once.
+      void refreshMonitoring(true).catch(() => undefined);
     } finally {
       setBusy(false);
     }

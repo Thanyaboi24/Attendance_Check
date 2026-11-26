@@ -72,6 +72,20 @@ describe('ApiClient token refresh', () => {
     await expect(client.post('/x', {}, { auth: false })).rejects.toMatchObject({ status: 0, code: 'NETWORK_ERROR' });
   });
 
+  it('treats a proxy error (API down) as a network failure, but keeps real API 500s', async () => {
+    const client = new ApiClient({
+      baseUrl: '/api/v1',
+      fetch: vi
+        .fn()
+        .mockResolvedValueOnce(new Response('', { status: 500 })) // Vite proxy: API not running
+        .mockResolvedValueOnce(new Response('<html>Bad Gateway</html>', { status: 502 })) // Caddy/nginx
+        .mockResolvedValueOnce(json(500, { code: 'INTERNAL_ERROR', message: 'Unexpected error' })),
+    });
+    await expect(client.post('/auth/login', {}, { auth: false })).rejects.toMatchObject({ status: 500, code: 'NETWORK_ERROR' });
+    await expect(client.post('/auth/login', {}, { auth: false })).rejects.toMatchObject({ status: 502, code: 'NETWORK_ERROR' });
+    await expect(client.post('/auth/login', {}, { auth: false })).rejects.toMatchObject({ status: 500, code: 'INTERNAL_ERROR' });
+  });
+
   it('omits empty query parameters', async () => {
     const fetch = vi.fn(async () => json(200, {}));
     const client = new ApiClient({ baseUrl: '/api/v1/', fetch });

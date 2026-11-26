@@ -213,6 +213,11 @@ async function toApiError(res: Response): Promise<ApiRequestError> {
   } catch {
     body = null;
   }
+  // A 5xx without the API's JSON error body comes from the proxy in front of it (Vite in development,
+  // Caddy/nginx in production) when the API is down or restarting: report it as "cannot reach the server".
+  if (res.status >= 500 && typeof body?.code !== 'string') {
+    return new ApiRequestError(res.status, NETWORK_ERROR, 'Cannot reach the server. Check your connection and try again.');
+  }
   return new ApiRequestError(
     res.status,
     typeof body?.code === 'string' ? body.code : `HTTP_${res.status}`,

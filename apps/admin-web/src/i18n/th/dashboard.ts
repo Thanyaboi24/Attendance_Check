@@ -42,6 +42,16 @@ export default {
     allClearHint: 'ไม่มีรายการที่รอการตรวจสอบ',
     open: 'เปิด',
   },
+  pendingCorrections: {
+    viewAll: 'ดูทั้งหมด',
+    empty: 'ไม่มีคำขอแก้ไขที่รอการพิจารณา',
+    emptyHint: 'คำขอใหม่จากบุคลากรจะแสดงที่นี่',
+    submitted: 'ส่งเมื่อ {{time}}',
+    more_one: 'มีคำขออีก {{count}} รายการที่รอการพิจารณา',
+    more_other: 'มีคำขออีก {{count}} รายการที่รอการพิจารณา',
+    approveFor: 'อนุมัติคำขอแก้ไขของ {{name}}',
+    rejectFor: 'ปฏิเสธคำขอแก้ไขของ {{name}}',
+  },
   cards: {
     activeStaff: { label: 'บุคลากรที่ใช้งานอยู่', hint: 'บัญชีที่มีสถานะใช้งานอยู่' },
     checkedInNow: { label: 'ลงเวลาเข้าแล้วขณะนี้', hint: 'รอบการลงเวลาที่ยังไม่ลงเวลาออก' },

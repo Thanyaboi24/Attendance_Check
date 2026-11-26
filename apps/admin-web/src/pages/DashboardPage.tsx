@@ -1,14 +1,23 @@
 import { useQuery } from '@tanstack/react-query';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { addDays, DISPLAY_TIME_ZONE, type DashboardSummary, type HolidayListResponse } from '@attendance/shared';
+import {
+  addDays,
+  CorrectionStatus,
+  DISPLAY_TIME_ZONE,
+  type CorrectionDto,
+  type DashboardSummary,
+  type HolidayListResponse,
+  type Paginated,
+} from '@attendance/shared';
 import { api } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { rolesFor } from '../auth/roles';
 import { Icon, type IconName } from '../components/icons';
 import { ErrorBox } from '../components/ui';
-import { daysBetween, fmtShortDate, holidayName, todayBangkok } from '../lib/format';
+import { daysBetween, fmtDateTime, fmtShortDate, fmtTime, holidayName, todayBangkok } from '../lib/format';
+import { CorrectionReviewDialog } from './CorrectionsPage';
 
 type AttentionKey = 'unresolvedRequests' | 'pendingCorrections' | 'longOpenSessions' | 'pendingSignups';
 
@@ -215,12 +224,138 @@ export function DashboardPage() {
             </ul>
           </section>
 
+          {/* Pending corrections: decide straight from the dashboard */}
+          {canFollow('/corrections') ? <PendingCorrectionsPanel /> : null}
+
           {/* Activity */}
           <ActivityPanel auto={s.automaticActionsToday} manual={s.manualActionsToday} />
         </div>
       ) : null}
     </div>
   );
+}
+
+const PENDING_SHOWN = 5;
+
+/**
+ * Correction requests awaiting a decision, oldest first, with Approve / Reject buttons. Both open the review
+ * dialog with that decision selected: the API requires a note to the staff member, and an approval can adjust
+ * the times. Shares the ['corrections'] query key, so a decision refreshes this panel and the Corrections page.
+ */
+function PendingCorrectionsPanel() {
+  const { t } = useTranslation(['dashboard', 'corrections']);
+  const [reviewing, setReviewing] = useState<{ correction: CorrectionDto; decision: 'APPROVE' | 'REJECT' } | null>(null);
+  const query = { status: CorrectionStatus.PENDING, page: 1, pageSize: PENDING_SHOWN };
+  const q = useQuery({
+    queryKey: ['corrections', query],
+    queryFn: () => api.get<Paginated<CorrectionDto>>('/admin/corrections', query),
+    refetchInterval: 60_000,
+  });
+  const total = q.data?.total ?? 0;
+  const items = q.data?.items ?? [];
+
+  return (
+    <section className="panel dash-corrections" aria-labelledby="corrections-title">
+      <div className="corr-head">
+        <span className={`att-icon${total > 0 ? ' att-icon-warn' : ''}`}>
+          <Icon name="corrections" size={18} />
+        </span>
+        <div className="corr-head-text">
+          <h2 id="corrections-title" className="panel-title">
+            {t('cards.pendingCorrections.label')}
+            {total > 0 ? <span className="att-count att-count-warn corr-total">{total}</span> : null}
+          </h2>
+          <p className="muted small">{t('cards.pendingCorrections.hint')}</p>
+        </div>
+        <Link to="/corrections" className="btn btn-ghost btn-small corr-all">
+          {t('pendingCorrections.viewAll')}
+          <Icon name="arrow" size={14} />
+        </Link>
+      </div>
+
+      <ErrorBox error={q.error} />
+      {q.isPending ? <div className="skeleton corr-skeleton" role="status" aria-busy="true" /> : null}
+
+      {q.data && items.length === 0 ? (
+        <div className="all-clear">
+          <span className="all-clear-icon">
+            <Icon name="check" size={22} />
+          </span>
+          <div>
+            <strong>{t('pendingCorrections.empty')}</strong>
+            <p className="muted small">{t('pendingCorrections.emptyHint')}</p>
+          </div>
+        </div>
+      ) : null}
+
+      {items.length > 0 ? (
+        <ul className="corr-list">
+          {items.map((c) => (
+            <li key={c.id} className="corr-item">
+              <div className="corr-who">
+                <span className="corr-avatar" aria-hidden>
+                  {initials(c.user.fullName)}
+                </span>
+                <div className="corr-who-text">
+                  <strong>{c.user.fullName}</strong>
+                  <span className="muted small">{[c.user.staffId, c.user.department].filter(Boolean).join(' · ')}</span>
+                </div>
+              </div>
+              <div className="corr-when">
+                <span className="corr-date">{fmtShortDate(c.workDate)}</span>
+                <span className="corr-times">
+                  <span title={t('corrections:col.requestedIn')}>{fmtTime(c.requestedCheckInAt)}</span>
+                  <Icon name="arrow" size={12} />
+                  <span title={t('corrections:col.requestedOut')}>{fmtTime(c.requestedCheckOutAt)}</span>
+                </span>
+              </div>
+              <p className="corr-reason" title={c.reason}>
+                {c.reason}
+              </p>
+              <span className="muted small corr-submitted">{t('pendingCorrections.submitted', { time: fmtDateTime(c.createdAt) })}</span>
+              <div className="corr-actions">
+                <button
+                  type="button"
+                  className="btn btn-small btn-primary"
+                  onClick={() => setReviewing({ correction: c, decision: 'APPROVE' })}
+                  aria-label={t('pendingCorrections.approveFor', { name: c.user.fullName })}
+                >
+                  <Icon name="check" size={14} />
+                  {t('corrections:review.approve')}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-small btn-danger-outline"
+                  onClick={() => setReviewing({ correction: c, decision: 'REJECT' })}
+                  aria-label={t('pendingCorrections.rejectFor', { name: c.user.fullName })}
+                >
+                  {t('corrections:review.reject')}
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {total > items.length ? (
+        <Link to="/corrections" className="corr-more">
+          {t('pendingCorrections.more', { count: total - items.length })}
+        </Link>
+      ) : null}
+
+      {reviewing ? (
+        <CorrectionReviewDialog
+          correction={reviewing.correction}
+          initialDecision={reviewing.decision}
+          onClose={() => setReviewing(null)}
+        />
+      ) : null}
+    </section>
+  );
+}
+
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  return ((parts[0]?.[0] ?? '') + (parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? '') : '')).toUpperCase();
 }
 
 /** Today's holiday (check-in closed) or the next one within 30 days; nothing when the calendar can't be read. */
